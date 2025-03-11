@@ -1,0 +1,21 @@
+.addonCard {
+  box-shadow: rgba(0, 0, 0, 0.1) -4px 9px 25px -6px;
+  background-color: white;
+  margin-bottom: 20px;
+  padding: 20px 30px;
+  display: grid;
+  grid-template-columns: 50% 42%;
+  column-gap: 40px;
+}
+.totalCard {
+  box-shadow: rgba(0, 0, 0, 0.1) -4px 9px 25px -6px;
+  background-color: white;
+  margin-bottom: 20px;
+  padding: 20px 30px;
+}
+@media (max-width: 481px) {
+  .addonCard {
+    display: flex;
+    flex-flow: column;
+  }
+}

@@ -1,0 +1,106 @@
+.wrapper {
+  display: flex;
+  flex-flow: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  gap: 20px;
+  padding: 40px 100px;
+  width: 100%;
+}
+.wrap {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 75% 18%;
+  height: 100%;
+  gap: 10px;
+  align-items: flex-start;
+}
+.row {
+  width: 60%;
+  padding: 20px 40px;
+  display: grid;
+  grid-template-columns: 100%;
+  /* flex-flow: row; */
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  box-shadow: rgba(14, 63, 126, 0.04) 0px 0px 0px 1px,
+    rgba(42, 51, 69, 0.04) 0px 1px 1px -0.5px,
+    rgba(42, 51, 70, 0.04) 0px 3px 3px -1.5px,
+    rgba(42, 51, 70, 0.04) 0px 6px 6px -3px,
+    rgba(14, 63, 126, 0.04) 0px 12px 12px -6px,
+    rgba(14, 63, 126, 0.04) 0px 24px 24px -12px;
+}
+.leftSide {
+  display: grid;
+  grid-template-columns: 59% 37%;
+  gap: 30px;
+  height: 53vh;
+  align-items: center;
+  justify-content: flex-start;
+}
+.calender {
+  display: flex;
+  width: 100%;
+  gap: 10px;
+  height: 120%;
+  margin-top: -20px;
+  align-items: center;
+  justify-content: center;
+}
+.rightSide {
+  width: 100%;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+.CalendarWrap {
+  width: 70%;
+  background-color: #f8f8f8;
+  display: flex; /* Ensure flex behavior */
+  flex-direction: column; /* Stack content */
+  align-items: center; /* Center horizontally */
+  justify-content: center; /* Center vertically */
+  padding: 20px;
+}
+.singleRow {
+  display: flex;
+  gap: 10px;
+}
+@media (max-width: 481px) {
+  .wrapper {
+    padding: 10px;
+  }
+  .wrap {
+    grid-template-columns: 71% 24%;
+    margin-right: 0px;
+  }
+  .calender {
+    display: none;
+  }
+  .singleRow {
+    display: flex;
+    gap: 10px;
+  }
+  .leftSide {
+    height: 100%;
+    grid-template-columns: 100%;
+  }
+  .row {
+    width: 100%;
+    justify-content: flex-start;
+    align-items: flex-start;
+    padding: 20px 10px;
+    grid-template-columns: 100%;
+  }
+  .rightSide {
+    flex-flow: column-reverse;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .CalendarWrap {
+    width: 100%;
+  }
+}

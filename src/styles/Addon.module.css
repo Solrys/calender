@@ -1,0 +1,30 @@
+.image {
+  width: 100%;
+  height: 560px;
+  object-fit: contain;
+  border-radius: 10px;
+  position: relative;
+}
+.wrapper {
+  display: flex;
+  flex-flow: column;
+  gap: 20px;
+  padding: 8rem;
+}
+.addonGrid {
+  display: grid;
+  grid-template-columns: 33% 33% 33%;
+  gap: 10px;
+}
+@media (max-width: 481px) {
+  .image {
+    height: 200px;
+    object-fit: cover;
+  }
+  .addonGrid {
+    grid-template-columns: 49% 49%;
+  }
+  .wrapper {
+    padding: 1.5rem;
+  }
+}
