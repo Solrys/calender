@@ -1,0 +1,214 @@
+:global(*) {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -o-font-smoothing: antialiased;
+  -webkit-appearance: none;
+}
+
+/* Header container */
+.navbar3_component {
+  position: relative;
+  z-index: 1000;
+  background: #fff; /* adjust if your header has a background */
+}
+
+/* Main container for header content */
+.navbar3_container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  position: relative;
+}
+
+/* Mobile menu button (hidden on desktop) */
+.navbar3_menu_button {
+  display: none;
+}
+
+/* Menu icon wrapper */
+.menu_icon_wrap {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+/* Menu text style */
+.menu {
+  font-size: 1rem;
+  font-weight: 500;
+  margin-right: 0.5rem;
+}
+
+/* Close icon style */
+.close {
+  display: none; /* To be toggled when menu is active */
+}
+
+/* Navigation menu */
+.navbar3_menu {
+  display: flex;
+  flex-grow: 1;
+}
+
+/* Flex container for grouping nav items */
+.flex {
+  display: flex;
+  align-items: center;
+}
+
+/* Container for all nav links */
+.div_block {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Dropdown wrapper */
+.nav_dropdown_main {
+  position: relative;
+}
+
+/* Toggle for dropdown */
+.link_nav_dropdown_toggle {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+}
+
+/* Icon after dropdown text */
+.icon_toggle {
+  margin-left: 0.25rem;
+  display: flex;
+  align-items: center;
+}
+
+/* Dropdown content container */
+.dropdown_content_wrap {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: #fff;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  display: none;
+  flex-direction: column;
+  min-width: 200px;
+  z-index: 10;
+}
+
+/* Show dropdown on hover */
+.nav_dropdown_main:hover .dropdown_content_wrap {
+  display: flex;
+}
+
+/* Sub navigation links container */
+.nav_sub_wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Individual nav link style */
+.navbar3_link {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Brand logo container */
+.brand_nav {
+  margin-left: auto;
+}
+
+/* Ensure images fill their container */
+.image_cover {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Logo link wrapper */
+.navbar3_logo_link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+/* Logo image styles (black version) */
+.navbar3_logo_black {
+  max-height: 50px;
+  margin-right: 0.5rem;
+}
+
+/* Logo image styles (white version) */
+.navbar3_logo_white {
+  max-height: 50px;
+  margin-left: 0.5rem;
+}
+
+/* Submenu on the right (i.e. the Cart link) */
+.menu_sub {
+  display: flex;
+  align-items: center;
+}
+
+/* Cart link style */
+.cart {
+  padding: 0.5rem 1rem;
+  background: #f0f0f0;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 1rem;
+  color: inherit;
+}
+
+/* Background overlay for nav (if needed) */
+.nav_bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.05);
+  z-index: -1;
+}
+
+/* Responsive styles */
+@media screen and (max-width: 991px) {
+  .navbar3_menu {
+    display: none; /* Hide full nav on smaller screens */
+  }
+  .navbar3_menu_button {
+    display: block; /* Show mobile menu button */
+  }
+}
+
+@media screen and (max-width: 767px) {
+  /* Adjust padding for tablet */
+  .navbar3_container {
+    padding: 1rem 1.5rem;
+  }
+  .navbar3_link {
+    font-size: 0.95rem;
+    padding: 0.5rem 0.75rem;
+  }
+}
+
+@media screen and (max-width: 479px) {
+  /* Mobile-specific adjustments */
+  .navbar3_container {
+    padding: 1rem;
+  }
+  .navbar3_logo_black,
+  .navbar3_logo_white {
+    max-height: 40px;
+  }
+  .navbar3_link {
+    font-size: 0.9rem;
+    padding: 0.5rem;
+  }
+}

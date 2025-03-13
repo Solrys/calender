@@ -1,0 +1,187 @@
+:global(*) {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -o-font-smoothing: antialiased;
+  -webkit-appearance: none;
+}
+
+/* Footer container */
+.footer {
+  background: #f8f8f8;
+  padding: 2rem 0;
+  font-size: 0.9rem;
+  color: #333;
+}
+
+/* Global horizontal padding inside footer */
+.paddingGlobal {
+  padding: 0 2rem;
+}
+
+/* Maximum width container */
+.containerLarge {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Vertical spacing inside footer sections */
+.paddingSectionMedium {
+  padding: 2rem 0;
+}
+
+/* Main grid for footer items */
+.footerMainGridNote {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+/* Footer logo */
+.footerNoteLogo {
+  flex: 1 1 auto;
+}
+
+/* Links container */
+.footerLinkWrapper {
+  display: flex;
+  flex: 2 1 auto;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+/* Each group of links */
+.footerLinkItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Link style */
+.footerLink {
+  text-decoration: none;
+  color: inherit;
+  font-size: 0.9rem;
+}
+
+/* Sub-section of footer (form, socials, copyright) */
+.footerSubWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-top: 2rem;
+  gap: 1rem;
+}
+
+/* Footer email form block */
+.footerFormBlock {
+  width: 100%;
+}
+
+/* Footer form styles */
+.footerForm {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Flex container for email input and submit */
+.flexInputSub {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+/* Email input styling */
+.formInput {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+/* Submit button styling */
+.submitButton {
+  padding: 0.5rem 1rem;
+  background: #4d65ff;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* Social follow section */
+.footerFollowWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Social icons/links container */
+.followSocialsWrapper {
+  display: flex;
+  gap: 1rem;
+}
+
+/* Social link style */
+.textLinkFollow {
+  text-decoration: none;
+  color: inherit;
+  font-size: 0.9rem;
+}
+
+/* Footer logo image */
+.imageCover {
+  max-width: 150px;
+  height: auto;
+  display: block;
+}
+
+/* Copyright text style */
+.textCopyrightCaption {
+  font-size: 0.8rem;
+  color: #777;
+}
+
+/* Responsive styles */
+@media screen and (max-width: 991px) {
+  .footerMainGridNote {
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+  }
+  .footerLinkWrapper {
+    justify-content: center;
+  }
+  .footerSubWrap {
+    align-items: center;
+  }
+}
+
+@media screen and (max-width: 767px) {
+  .paddingGlobal {
+    padding: 0 1rem;
+  }
+  .footerLink {
+    font-size: 0.85rem;
+  }
+}
+
+@media screen and (max-width: 479px) {
+  .containerLarge {
+    padding: 0 1rem;
+  }
+  .imageCover {
+    max-width: 120px;
+  }
+  .footerForm,
+  .flexInputSub {
+    flex-direction: column;
+  }
+  .formInput {
+    width: 100%;
+  }
+  .submitButton {
+    width: 100%;
+  }
+}

@@ -1,6 +1,6 @@
 import React, { useContext, useState, useEffect, useMemo } from "react";
 import { format, startOfDay, addDays, isToday } from "date-fns";
-import { MdCalendarMonth, MdAccessTime, MdLocationOn } from "react-icons/md";
+import { MdLocationOn } from "react-icons/md";
 // shadcn/ui components
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
@@ -232,15 +232,45 @@ export default function BookingPage() {
             </div>
           </div>
           <div className="w-full h-full mt-4">
-            <label className="text-xs font-bold mb-1 block">Start Time</label>
+            <div className="w-full mt-1 mb-3">
+              <label className="text-xs font-bold mb-1 block">
+                How many Hours?
+              </label>
+              <div className="flex items-center p-[6px] justify-between  bg-[#f8f8f8]">
+                <button
+                  onClick={() =>
+                    setBookingHours((prev) =>
+                      Math.max(minBookingHours, prev - 1)
+                    )
+                  }
+                  className="px-2"
+                >
+                  –
+                </button>
+                <span className="mx-2">{bookingHours}</span>
+                <button
+                  onClick={() =>
+                    setBookingHours((prev) => Math.min(17, prev + 1))
+                  }
+                  className="px-2"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+            <label className="text-xs font-bold mb-1 block">
+              {" "}
+              {startDate ? format(startDate, "EEEE, MMMM d") : ""}
+            </label>
             {bookingHours <= 0 ? (
-              <div className="text-gray-500 w-full h-full bg-[#f8f8f8] flex items-center justify-center text-sm">
+              <div className="text-gray-500 w-full h-[80%] bg-[#f8f8f8] flex items-center justify-center text-sm">
                 Select booking hours first
               </div>
             ) : (
               <TimeSlider
                 title="Start Time"
                 value={startTime}
+                handleNext={handleNext}
                 onChange={setStartTime}
                 selectedDate={startDate}
                 blockedTimes={blockedTimesForStartDate}
@@ -258,31 +288,7 @@ export default function BookingPage() {
         </div>
 
         {/* NEXT BUTTON */}
-        <div className={styles.rightSide}>
-          <div className="w-full mt-1">
-            <label className="text-xs font-bold mb-1 block">
-              How many Hours?
-            </label>
-            <div className="flex items-center p-[6px] justify-between  bg-[#f8f8f8]">
-              <button
-                onClick={() =>
-                  setBookingHours((prev) => Math.max(minBookingHours, prev - 1))
-                }
-                className="px-2"
-              >
-                –
-              </button>
-              <span className="mx-2">{bookingHours}</span>
-              <button
-                onClick={() =>
-                  setBookingHours((prev) => Math.min(17, prev + 1))
-                }
-                className="px-2"
-              >
-                +
-              </button>
-            </div>
-          </div>
+        {/* <div className={styles.rightSide}>
           <Button
             variant="default"
             className="mt-4 h-12 px-10"
@@ -290,7 +296,7 @@ export default function BookingPage() {
           >
             Next
           </Button>
-        </div>
+        </div> */}
       </div>
     </div>
   );

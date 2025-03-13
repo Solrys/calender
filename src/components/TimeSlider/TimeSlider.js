@@ -35,6 +35,7 @@ export default function TimeSlider({
   selectedDate,
   blockedTimes = new Set(),
   isMobile,
+  handleNext,
   bookingHours = 0, // booking hours required for continuous availability
 }) {
   // Compute the available times based on the bookingHours requirement.
@@ -97,23 +98,38 @@ export default function TimeSlider({
 
   return (
     <div className="flex flex-col items-center mt-1">
-      <div ref={containerRef} className="w-full p-2 sm:h-[500px] overflow-auto">
+      <div ref={containerRef} className="w-full p-2 sm:h-[400px] overflow-auto">
         {availableTimes.map((slot, i) => {
           const isSelected = i === currentIndex;
           const slotClass = isSelected
-            ? "border border-blue-500 bg-white"
-            : "bg-white text-black cursor-pointer hover:bg-blue-50";
+            ? "border border-[#000] bg-white"
+            : "bg-white text-black cursor-pointer border border-[#00000020] hover:bg-blue-50";
           return (
             <div
               key={slot}
-              data-index={i}
-              onClick={() => {
-                setCurrentIndex(i);
-                onChange(slot);
-              }}
-              className={`mb-2 p-2 rounded text-center ${slotClass}`}
+              className={` grid   ${
+                isSelected ? "grid-cols-2" : "grid-cols-1"
+              } gap-4`}
             >
-              {slot}
+              <div
+                key={slot}
+                data-index={i}
+                onClick={() => {
+                  setCurrentIndex(i);
+                  onChange(slot);
+                }}
+                className={`mb-2 p-2 rounded text-center ${slotClass}`}
+              >
+                {slot}
+              </div>
+              {isSelected && (
+                <button
+                  className="p-2 rounded text-white bg-[#000] fade-in h-10 border-0 "
+                  onClick={handleNext}
+                >
+                  Next
+                </button>
+              )}
             </div>
           );
         })}
