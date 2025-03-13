@@ -1,8 +1,26 @@
 import Stripe from "stripe";
 import dbConnect from "@/lib/dbConnect";
 import Booking from "@/models/Booking";
-
+import { format } from "date-fns";
+import createCalendarEvent from "@/utils/calenderEvent";
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+// Helper: Convert 12-hour format to 24-hour format string "HH:MM:SS"
+function convertTo24Hour(timeStr) {
+  const [time, modifier] = timeStr.split(" ");
+  let [hours, minutes] = time.split(":").map(Number);
+  if (modifier.toUpperCase() === "PM" && hours !== 12) {
+    hours += 12;
+  }
+  if (modifier.toUpperCase() === "AM" && hours === 12) {
+    hours = 0;
+  }
+  const hoursStr = hours < 10 ? `0${hours}` : `${hours}`;
+  const minutesStr = minutes < 10 ? `0${minutes}` : `${minutes}`;
+  return `${hoursStr}:${minutesStr}:00`;
+}
+
+// Helper to create Google Calendar event
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -24,7 +42,6 @@ export default async function handler(req, res) {
     console.log("✅ Stripe Session Retrieved:", session);
 
     if (session.payment_status !== "paid") {
-      // Payment is not complete, so the booking remains pending
       return res.status(400).json({ message: "Payment not completed" });
     }
 
@@ -36,7 +53,7 @@ export default async function handler(req, res) {
         .json({ message: "Booking ID missing from session metadata" });
     }
 
-    // Update the booking status to "success" after successful payment
+    // Update the booking status to "success"
     const updatedBooking = await Booking.findByIdAndUpdate(
       bookingId,
       { paymentStatus: "success" },
@@ -49,14 +66,59 @@ export default async function handler(req, res) {
 
     console.log(`✅ Booking ${bookingId} marked as success`);
 
+    // Destructure necessary details from the booking document
+    const {
+      studio,
+      startDate,
+      startTime,
+      endTime,
+      customerName,
+      customerEmail,
+    } = updatedBooking;
+
+    // Format startDate to get just the date portion (YYYY-MM-DD)
+    const formattedDate = format(new Date(startDate), "yyyy-MM-dd");
+
+    // Prepare event data using the formatted date and converted times
+    const eventData = {
+      summary: `Booking for ${studio}`,
+      location: "Your studio location", // Optionally update dynamically
+      description: `Booking details:
+Date: ${formattedDate}
+Start: ${startTime}
+End: ${endTime}
+Customer: ${customerName} (${customerEmail})`,
+      start: {
+        dateTime: new Date(
+          formattedDate + "T" + convertTo24Hour(startTime)
+        ).toISOString(),
+        timeZone: "America/New_York", // Adjust as needed
+      },
+      end: {
+        dateTime: new Date(
+          formattedDate + "T" + convertTo24Hour(endTime)
+        ).toISOString(),
+        timeZone: "America/New_York", // Adjust as needed
+      },
+    };
+
+    try {
+      const calendarEvent = await createCalendarEvent(eventData);
+      console.log("✅ Google Calendar event created:", calendarEvent.id);
+    } catch (calError) {
+      console.error("❌ Error creating calendar event:", calError);
+      // Optionally handle calendar event errors here
+    }
+
     res.status(200).json({
       message: "Payment verified and booking updated",
       booking: updatedBooking,
     });
   } catch (error) {
     console.error("❌ Error verifying payment:", error);
-    res
-      .status(500)
-      .json({ message: "Internal server error", error: error.message });
+    res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
   }
 }

@@ -177,7 +177,7 @@ export default function BookingPage() {
         <div className={styles.leftSide}>
           <div>
             <div className={styles.wrap}>
-              <div className="w-full">
+              <div className="w-[100%] sm:w-[92%]">
                 <label className="w-40 text-xs font-bold mb-1">
                   Select Studio
                 </label>
@@ -214,56 +214,6 @@ export default function BookingPage() {
                   </p>
                 )}
               </div>
-
-              {/* Booking Hours */}
-              <div className="w-full mt-1">
-                <label className="text-xs font-bold mb-1 block">
-                  Booking Hours
-                </label>
-                <div className="flex items-center p-[6px]  bg-[#f8f8f8]">
-                  <button
-                    onClick={() =>
-                      setBookingHours((prev) =>
-                        Math.max(minBookingHours, prev - 1)
-                      )
-                    }
-                    className="px-2"
-                  >
-                    –
-                  </button>
-                  <span className="mx-2">{bookingHours}</span>
-                  <button
-                    onClick={() =>
-                      setBookingHours((prev) => Math.min(17, prev + 1))
-                    }
-                    className="px-2"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-
-              {/* Start Time using TimeSlider */}
-              {/* <div className="w-full mt-4">
-              <label className="text-xs font-bold mb-1 block">Start Time</label>
-              {bookingHours <= 0 ? (
-                <div className="text-gray-500">Select booking hours first</div>
-              ) : (
-                <TimeSlider
-                  title="Start Time"
-                  value={startTime}
-                  onChange={setStartTime}
-                  selectedDate={startDate}
-                  blockedTimes={blockedTimesForStartDate}
-                  bookingHours={bookingHours} // Pass selected booking hours
-                />
-              )}
-              {errors.startTime && (
-                <p className="text-red-500 text-xs mt-1">
-                  * Start time is required
-                </p>
-              )}
-            </div> */}
             </div>
             <div className="w-full mt-4">
               <Calendar
@@ -274,13 +224,19 @@ export default function BookingPage() {
                 onSelect={(value) => setStartDate(value)}
                 numberOfMonths={1}
                 className="w-full"
+                classNames={{
+                  day_disabled:
+                    "border border-[#f8f8f8] opacity-50 cursor-not-allowed", // Apply border to disabled dates
+                }}
               />
             </div>
           </div>
-          <div className="w-full h-full">
+          <div className="w-full h-full mt-4">
             <label className="text-xs font-bold mb-1 block">Start Time</label>
             {bookingHours <= 0 ? (
-              <div className="text-gray-500">Select booking hours first</div>
+              <div className="text-gray-500 w-full h-full bg-[#f8f8f8] flex items-center justify-center text-sm">
+                Select booking hours first
+              </div>
             ) : (
               <TimeSlider
                 title="Start Time"
@@ -303,6 +259,30 @@ export default function BookingPage() {
 
         {/* NEXT BUTTON */}
         <div className={styles.rightSide}>
+          <div className="w-full mt-1">
+            <label className="text-xs font-bold mb-1 block">
+              How many Hours?
+            </label>
+            <div className="flex items-center p-[6px] justify-between  bg-[#f8f8f8]">
+              <button
+                onClick={() =>
+                  setBookingHours((prev) => Math.max(minBookingHours, prev - 1))
+                }
+                className="px-2"
+              >
+                –
+              </button>
+              <span className="mx-2">{bookingHours}</span>
+              <button
+                onClick={() =>
+                  setBookingHours((prev) => Math.min(17, prev + 1))
+                }
+                className="px-2"
+              >
+                +
+              </button>
+            </div>
+          </div>
           <Button
             variant="default"
             className="mt-4 h-12 px-10"
