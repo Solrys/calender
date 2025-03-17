@@ -167,7 +167,7 @@ export default function BookingPage() {
           <div>
             <div className={styles.wrap}>
               <div className="w-[100%] sm:w-[92%]">
-                <label className="w-40 text-[16px] font-bold mb-1">
+                <label className="w-40 text-[18px] font-bold mb-1">
                   Select Studio
                 </label>
                 <Select

@@ -27,8 +27,16 @@ export default function AddOnsPage() {
                 src={item.image}
                 alt={item.name}
                 fill
-                className="object-cover mb-2"
+                className="object-cover"
               />
+              <div className="absolute top-0 right-0 m-2 flex flex-col items-end">
+                <Tippy content={item.description} placement="top">
+                  <span className="bg-white p-1 rounded-full">
+                    <FaInfoCircle className="text-xs text-gray-600" />
+                  </span>
+                </Tippy>
+                {/* Overlay element below the tooltip icon */}
+              </div>
             </div>
 
             {/* Item Name & Price with Description Tooltip */}
@@ -37,11 +45,6 @@ export default function AddOnsPage() {
                 <p className="font-semibold text-sm uppercase cursor-help whitespace-nowrap">
                   {item.name}
                 </p>
-                <Tippy content={item.description} placement="top">
-                  <span className="inline-block">
-                    <FaInfoCircle className="text-xs text-gray-600" />
-                  </span>
-                </Tippy>
               </div>
 
               {/* Quantity Controls */}
@@ -93,7 +96,7 @@ export default function AddOnsPage() {
                   >
                     +
                   </button>
-                  {(item.id === 13 || item.id === 14) && (
+                  {/* {(item.id === 13 || item.id === 14) && (
                     <Tippy
                       content="The fee is a one time fee and not charged by the hour"
                       placement="top"
@@ -102,7 +105,7 @@ export default function AddOnsPage() {
                         <FaInfoCircle className="text-xs text-gray-600" />
                       </span>
                     </Tippy>
-                  )}
+                  )} */}
                 </div>
               </div>
             </div>
