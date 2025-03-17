@@ -4,6 +4,8 @@ import styles from "@/styles/Addon.module.css";
 import Image from "next/image";
 import { useRouter } from "next/router";
 import { FaInfoCircle } from "react-icons/fa";
+import Tippy from "@tippyjs/react";
+import "tippy.js/dist/tippy.css";
 
 export default function AddOnsPage() {
   const { startDate, startTime, endTime, items, updateItemQuantity } =
@@ -84,13 +86,13 @@ export default function AddOnsPage() {
                   >
                     +
                   </button>
+
                   {(item.id === 13 || item.id === 14) && (
-                    <span
-                      title="The fee is a one time fee and not charged by the hour"
-                      className="ml-2 cursor-default"
-                    >
-                      <FaInfoCircle className="text-xs text-gray-600" />
-                    </span>
+                    <Tippy content="The fee is a one time fee and not charged by the hour">
+                      <span className="ml-2 inline-block">
+                        <FaInfoCircle className="text-xs text-gray-600" />
+                      </span>
+                    </Tippy>
                   )}
                 </div>
               </div>
