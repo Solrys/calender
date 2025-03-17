@@ -46,6 +46,8 @@ export function BookingProvider({ children }) {
       price: 350,
       quantity: 0,
       image: "/service/photography.avif",
+      description:
+        "Work with our in-house photographers for a seamless, high-quality shoot. Includes 30 professionally edited images. Access to all raw photos and additional edits are available for a fee. Full lighting setup and other photography essentials included.",
     },
     {
       id: 7,
@@ -53,6 +55,8 @@ export function BookingProvider({ children }) {
       price: 650,
       quantity: 0,
       image: "/service/videography.jpg",
+      description:
+        "Work with our in-house videographers to create high-end visual content. Includes a full shoot and professionally edited footage tailored to your needs. Lighting and all necessary equipment are provided to ensure a flawless production.",
     },
     {
       id: 8,
@@ -60,6 +64,8 @@ export function BookingProvider({ children }) {
       price: 250,
       quantity: 0,
       image: "/service/hair.webp",
+      description:
+        "Our expert in-house hairstylists specialize in crafting stunning looks tailored to your needs. Whether for a photoshoot, video content, or a major event, they’ll ensure your hair is styled to perfection.",
     },
     {
       id: 1,
@@ -67,14 +73,17 @@ export function BookingProvider({ children }) {
       price: 300,
       quantity: 0,
       image: "/service/makeup.avif",
+      description:
+        "Our highly skilled in-house makeup artists are ready to bring your vision to life, whether it’s for a shoot, video, or a special event. From natural glam to bold editorial looks, they’ve got you covered.",
     },
-
     {
       id: 10,
       name: "Models",
       price: 400,
       quantity: 0,
       image: "/service/models.avif",
+      description:
+        "Gain access to top-tier models through our agency partners. Choose models whose look and energy align with your production’s creative direction, ensuring the perfect fit for your shoot or event.",
     },
     {
       id: 11,
@@ -82,6 +91,8 @@ export function BookingProvider({ children }) {
       price: 500,
       quantity: 0,
       image: "/service/wardrobe.avif",
+      description:
+        "Work with our in-house wardrobe stylists, trained by renowned celebrity stylist Sarah Akiba, known for curating looks for some of the biggest names in the music industry. Gain exclusive access to her extensive wardrobe archive, with custom-styled looks designed to elevate your production. This service includes three expertly curated wardrobe changes. Send us your inspiration, and we will bring your vision to life with a look tailored just for you.",
     },
     {
       id: 12,
@@ -89,6 +100,8 @@ export function BookingProvider({ children }) {
       price: 250,
       quantity: 0,
       image: "/service/btsreels.jpg",
+      description:
+        "Need an extra set of hands? Our trained production assistants provide on-set support while also capturing authentic behind-the-scenes (BTS) content for social media. Get high-quality iPhone footage optimized for platforms like Instagram Reels and TikTok. Includes 1 edited reel per hour booked.",
     },
     {
       id: 13,
@@ -96,6 +109,8 @@ export function BookingProvider({ children }) {
       price: 2500,
       quantity: 0,
       image: "/service/creativedirection.avif",
+      description:
+        "Collaborate with Sarah Akiba, a renowned celebrity stylist and creative director behind major campaigns like J Balvin x Jordan and an extensive portfolio of high-profile brand collaborations. She provides comprehensive production services, including concept development, set design, on-set direction, and seamless execution—bringing your creative vision to life with precision and style.",
     },
     {
       id: 14,
@@ -103,6 +118,8 @@ export function BookingProvider({ children }) {
       price: 500,
       quantity: 0,
       image: "/service/moodboards.jpg",
+      description:
+        "A carefully curated visual guide designed to capture your project’s essence. Our moodboard ensures a cohesive aesthetic, providing a clear roadmap for your team to achieve a flawlessly executed production or event.",
     },
   ]);
 

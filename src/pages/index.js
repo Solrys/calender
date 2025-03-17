@@ -265,6 +265,7 @@ export default function BookingPage() {
               </div>
             </div>
             <label className="text-xs font-bold mb-1 block">
+              What time wold you like to start on{" "}
               {startDate ? format(startDate, "EEEE, MMMM d") : ""}
             </label>
             {bookingHours <= 0 ? (
@@ -282,6 +283,7 @@ export default function BookingPage() {
                   }
                   setStartTime(val);
                 }}
+                handleNext={handleNext}
                 selectedDate={startDate}
                 blockedTimes={blockedTimesForStartDate}
                 bookingHours={bookingHours}
@@ -296,7 +298,7 @@ export default function BookingPage() {
         </div>
 
         {/* NEXT BUTTON */}
-        <div className={styles.rightSide}>
+        {/* <div className={styles.rightSide}>
           <Button
             variant="default"
             className="mt-4 h-12 px-10"
@@ -304,7 +306,7 @@ export default function BookingPage() {
           >
             Next
           </Button>
-        </div>
+        </div> */}
       </div>
     </div>
   );

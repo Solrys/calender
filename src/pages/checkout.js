@@ -113,8 +113,8 @@ export default function CheckoutPage() {
       setError("Server error. Please try again later.");
     }
   };
-  console.log(selectedStudio, "selected studio");
-
+  // console.log(selectedStudio, "selected studio");
+  const filteredItems = items.filter((item) => item.quantity > 0);
   // When Checkout is clicked, open the modal
   const openModal = () => {
     setShowModal(true);
@@ -217,43 +217,46 @@ export default function CheckoutPage() {
             <p className="text-center">Price/Hr</p>
             <p className="text-center">Total Price</p>
           </div>
+          {filteredItems.length === 0 ? (
+            <p className="text-gray-500 text-sm">No addons to show.</p>
+          ) : (
+            items
+              .filter((item) => item.quantity > 0)
+              .map((item) => (
+                <div
+                  key={item.id}
+                  className="grid grid-cols-3  gap-4 items-center py-2"
+                >
+                  {/* Quantity Control */}
+                  <div className="flex items-center justify-center bg-[#f8f8f8] px-4 py-3 font-semibold text-center text-sm w-full">
+                    <button
+                      onClick={() => updateItemQuantity(item.id, -1)}
+                      className="text-lg px-2 text-gray-600"
+                      disabled={item.quantity <= 1}
+                    >
+                      −
+                    </button>
+                    <span className="mx-3">{item.quantity}</span>
+                    <button
+                      onClick={() => updateItemQuantity(item.id, 1)}
+                      className="text-lg px-2 text-gray-600"
+                    >
+                      +
+                    </button>
+                  </div>
 
-          {items
-            .filter((item) => item.quantity > 0)
-            .map((item) => (
-              <div
-                key={item.id}
-                className="grid grid-cols-3  gap-4 items-center py-2"
-              >
-                {/* Quantity Control */}
-                <div className="flex items-center justify-center bg-[#f8f8f8] px-4 py-3 font-semibold text-center text-sm w-full">
-                  <button
-                    onClick={() => updateItemQuantity(item.id, -1)}
-                    className="text-lg px-2 text-gray-600"
-                    disabled={item.quantity <= 1}
-                  >
-                    −
-                  </button>
-                  <span className="mx-3">{item.quantity}</span>
-                  <button
-                    onClick={() => updateItemQuantity(item.id, 1)}
-                    className="text-lg px-2 text-gray-600"
-                  >
-                    +
-                  </button>
+                  {/* Price per hour */}
+                  <p className="flex items-center gap-2 justify-center bg-[#f8f8f8] px-4 py-3 font-semibold text-center text-sm w-full">
+                    ${item.price}/Hr
+                  </p>
+
+                  {/* Total Price for item */}
+                  <p className="flex items-center gap-2 justify-center bg-[#f8f8f8] px-4 py-3 font-semibold text-center text-sm w-full">
+                    ${item.quantity * item.price}
+                  </p>
                 </div>
-
-                {/* Price per hour */}
-                <p className="flex items-center gap-2 justify-center bg-[#f8f8f8] px-4 py-3 font-semibold text-center text-sm w-full">
-                  ${item.price}/Hr
-                </p>
-
-                {/* Total Price for item */}
-                <p className="flex items-center gap-2 justify-center bg-[#f8f8f8] px-4 py-3 font-semibold text-center text-sm w-full">
-                  ${item.quantity * item.price}
-                </p>
-              </div>
-            ))}
+              ))
+          )}
         </div>
       </div>
 

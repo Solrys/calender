@@ -31,11 +31,18 @@ export default function AddOnsPage() {
               />
             </div>
 
-            {/* Item Name & Price */}
+            {/* Item Name & Price with Description Tooltip */}
             <div className="flex justify-between flex-wrap px-2">
-              <p className="font-semibold text-sm w-[50%] uppercase">
-                {item.name}
-              </p>
+              <div className="flex flex-1 items-center space-x-2">
+                <p className="font-semibold text-sm uppercase cursor-help whitespace-nowrap">
+                  {item.name}
+                </p>
+                <Tippy content={item.description} placement="top">
+                  <span className="inline-block">
+                    <FaInfoCircle className="text-xs text-gray-600" />
+                  </span>
+                </Tippy>
+              </div>
 
               {/* Quantity Controls */}
               <div className="flex gap-2 items-center">
@@ -86,9 +93,11 @@ export default function AddOnsPage() {
                   >
                     +
                   </button>
-
                   {(item.id === 13 || item.id === 14) && (
-                    <Tippy content="The fee is a one time fee and not charged by the hour">
+                    <Tippy
+                      content="The fee is a one time fee and not charged by the hour"
+                      placement="top"
+                    >
                       <span className="ml-2 inline-block">
                         <FaInfoCircle className="text-xs text-gray-600" />
                       </span>
@@ -104,30 +113,16 @@ export default function AddOnsPage() {
       {/* Navigation Buttons */}
       <div className="flex justify-center gap-8 mt-6 flex-wrap">
         <button
-          className={`px-6 py-2 bg-gray-400 text-white ${
-            items.some((item) => item.quantity > 0)
-              ? "hover:bg-gray-800"
-              : "cursor-not-allowed"
-          }`}
-          disabled={!items.some((item) => item.quantity > 0)}
+          className={`px-6 py-2 border text-black bg-transparent hover:bg-gray-800 hover:text-white`}
+          onClick={() => router.push("/")}
         >
           Back
-        </button>
-        <button
-          className={`px-6 py-2 bg-black text-white ${
-            items.some((item) => item.quantity > 0)
-              ? "hover:bg-gray-800"
-              : "bg-gray-400 cursor-not-allowed"
-          }`}
-          onClick={() => router.push("/checkout")}
-        >
-          Next
         </button>
         <button
           className={`px-6 py-2 bg-black text-white hover:bg-gray-800`}
           onClick={() => router.push("/checkout")}
         >
-          Skip without add-on services
+          Next
         </button>
       </div>
     </div>
