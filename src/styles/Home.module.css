@@ -70,6 +70,23 @@
   display: flex;
   gap: 10px;
 }
+@media (max-width: 1281px) {
+  .row {
+    width: 100%;
+  }
+}
+@media (max-width: 961px) {
+  .row {
+    width: 100%;
+    justify-content: flex-start;
+    align-items: flex-start;
+    padding: 20px 10px;
+    grid-template-columns: 100%;
+  }
+  .leftSide {
+    grid-template-columns: 100%;
+  }
+}
 @media (max-width: 481px) {
   .wrapper {
     padding: 10px;

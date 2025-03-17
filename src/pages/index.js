@@ -15,7 +15,7 @@ import styles from "@/styles/Home.module.css";
 import { BookingContext } from "@/context/BookingContext";
 import { useRouter } from "next/router";
 
-// Import helper for blocked times
+// Import helper for blocked times and time conversions
 import {
   computeBlockedTimesByDate,
   minutesToTimeString,
@@ -52,7 +52,7 @@ export default function BookingPage() {
   // Compute blocked times for the selected date.
   const [blockedTimesByDate, setBlockedTimesByDate] = useState({});
 
-  // Handle calendar update when today is selected but past closing time
+  // If today's date is selected but it's past closing time, update to tomorrow
   useEffect(() => {
     if (startDate && isToday(startDate)) {
       const now = new Date();
@@ -65,15 +65,15 @@ export default function BookingPage() {
       }
     }
   }, [startDate, today, setStartDate, setStartTime]);
+
+  // Auto-calculate endTime based on startTime and bookingHours
   useEffect(() => {
     if (startTime && bookingHours > 0) {
-      // Convert start time to minutes, add (bookingHours * 60), then convert back to string
       const startMins = timeStringToMinutes(startTime);
       const endMins = startMins + bookingHours * 60;
       const newEndTime = minutesToTimeString(endMins);
       setEndTime(newEndTime);
     } else {
-      // If bookingHours=0 or no start time, clear endTime
       setEndTime("");
     }
   }, [startTime, bookingHours, setEndTime]);
@@ -110,7 +110,7 @@ export default function BookingPage() {
     [blockedTimesByDate, startDateKey]
   );
 
-  // Determine the minimum allowed booking hours
+  // Determine minimum allowed booking hours (special studio requires at least 2)
   const minBookingHours =
     selectedStudio &&
     selectedStudio.name === "BOTH THE LAB & THE EXTENSION FOR EVENTS"
@@ -119,50 +119,39 @@ export default function BookingPage() {
 
   // Validate and process booking details.
   const handleNext = async () => {
-    // Build an errors object
     const newErrors = {
       studio: !selectedStudio,
       startDate: !startDate,
       startTime: !startTime,
-      endTime: !endTime, // We'll assume endTime is being auto-calculated
+      endTime: !endTime,
     };
 
-    // 1) Basic validations
     if (!selectedStudio) {
       alert("Please select a studio.");
     }
-
     if (bookingHours <= 0) {
       alert("Please select the number of booking hours (at least 1).");
-      // If bookingHours is zero or negative, also mark startTime as invalid
       newErrors.startTime = true;
       newErrors.endTime = true;
     }
-
     if (!startDate) {
       alert("Please select a date.");
     }
-
     if (!startTime) {
       alert("Please select a start time.");
     }
-
     if (!endTime) {
       alert("Something went wrong with end time calculation.");
     }
 
-    // 2) Update local error state
     setErrors(newErrors);
 
-    // If any validation failed, stop here
     if (Object.values(newErrors).some((val) => val === true)) {
       return;
     }
 
     try {
-      // 4) Make the API call
-
-      // 5) Navigate to the next page on success
+      // Your API call would go here (e.g. saving to backend)
       router.push("/addons");
     } catch (error) {
       console.error("Error during booking:", error);
@@ -178,7 +167,7 @@ export default function BookingPage() {
           <div>
             <div className={styles.wrap}>
               <div className="w-[100%] sm:w-[92%]">
-                <label className="w-40 text-xs font-bold mb-1">
+                <label className="w-40 text-[16px] font-bold mb-1">
                   Select Studio
                 </label>
                 <Select
@@ -190,6 +179,7 @@ export default function BookingPage() {
                     setSelectedStudio(studioObj);
                     setBookingHours(0);
                     setStartTime("");
+                    setEndTime("");
                   }}
                 >
                   <SelectTrigger className="w-full bg-[#f8f8f8] text-black">
@@ -215,43 +205,59 @@ export default function BookingPage() {
                 )}
               </div>
             </div>
+            {/* Calendar Section */}
             <div className="w-full mt-4">
               <Calendar
                 mode="single"
                 inline
                 selected={startDate}
                 disabled={{ before: new Date() }}
-                onSelect={(value) => setStartDate(value)}
+                onSelect={(value) => {
+                  if (!selectedStudio) {
+                    alert("Please select a studio first.");
+                    return;
+                  }
+                  setStartDate(value);
+                }}
                 numberOfMonths={1}
                 className="w-full"
                 classNames={{
                   day_disabled:
-                    "border border-[#f8f8f8] opacity-50 cursor-not-allowed", // Apply border to disabled dates
+                    "border border-[#f8f8f8] opacity-50 cursor-not-allowed",
                 }}
               />
             </div>
           </div>
+          {/* Booking Hours and TimeSlider Section */}
           <div className="w-full h-full mt-4">
             <div className="w-full mt-1 mb-3">
               <label className="text-xs font-bold mb-1 block">
-                How many Hours?
+                How many hours would you like to rent?
               </label>
-              <div className="flex items-center p-[6px] justify-between  bg-[#f8f8f8]">
+              <div className="flex items-center p-[6px] justify-between bg-[#f8f8f8]">
                 <button
-                  onClick={() =>
+                  onClick={() => {
+                    if (!selectedStudio) {
+                      alert("Please select a studio first.");
+                      return;
+                    }
                     setBookingHours((prev) =>
                       Math.max(minBookingHours, prev - 1)
-                    )
-                  }
+                    );
+                  }}
                   className="px-2"
                 >
                   –
                 </button>
                 <span className="mx-2">{bookingHours}</span>
                 <button
-                  onClick={() =>
-                    setBookingHours((prev) => Math.min(17, prev + 1))
-                  }
+                  onClick={() => {
+                    if (!selectedStudio) {
+                      alert("Please select a studio first.");
+                      return;
+                    }
+                    setBookingHours((prev) => Math.min(17, prev + 1));
+                  }}
                   className="px-2"
                 >
                   +
@@ -259,7 +265,6 @@ export default function BookingPage() {
               </div>
             </div>
             <label className="text-xs font-bold mb-1 block">
-              {" "}
               {startDate ? format(startDate, "EEEE, MMMM d") : ""}
             </label>
             {bookingHours <= 0 ? (
@@ -270,11 +275,16 @@ export default function BookingPage() {
               <TimeSlider
                 title="Start Time"
                 value={startTime}
-                handleNext={handleNext}
-                onChange={setStartTime}
+                onChange={(val) => {
+                  if (!selectedStudio) {
+                    alert("Please select a studio first.");
+                    return;
+                  }
+                  setStartTime(val);
+                }}
                 selectedDate={startDate}
                 blockedTimes={blockedTimesForStartDate}
-                bookingHours={bookingHours} // Pass selected booking hours
+                bookingHours={bookingHours}
               />
             )}
             {errors.startTime && (
@@ -283,12 +293,10 @@ export default function BookingPage() {
               </p>
             )}
           </div>
-
-          {/* Calendar */}
         </div>
 
         {/* NEXT BUTTON */}
-        {/* <div className={styles.rightSide}>
+        <div className={styles.rightSide}>
           <Button
             variant="default"
             className="mt-4 h-12 px-10"
@@ -296,7 +304,7 @@ export default function BookingPage() {
           >
             Next
           </Button>
-        </div> */}
+        </div>
       </div>
     </div>
   );

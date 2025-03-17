@@ -3,6 +3,7 @@ import { BookingContext } from "@/context/BookingContext";
 import styles from "@/styles/Addon.module.css";
 import Image from "next/image";
 import { useRouter } from "next/router";
+import { FaInfoCircle } from "react-icons/fa";
 
 export default function AddOnsPage() {
   const { startDate, startTime, endTime, items, updateItemQuantity } =
@@ -12,6 +13,9 @@ export default function AddOnsPage() {
   return (
     <div className={styles.wrapper}>
       {/* Add-On Items */}
+      <h2 className="text-[22px] sm:text-[32px] font-bold text-center">
+        Optional add-on services
+      </h2>
       <div className={styles.addonGrid}>
         {items.map((item) => (
           <div key={item.id} className="flex flex-col gap-2 mb-3">
@@ -80,6 +84,14 @@ export default function AddOnsPage() {
                   >
                     +
                   </button>
+                  {(item.id === 13 || item.id === 14) && (
+                    <span
+                      title="The fee is a one time fee and not charged by the hour"
+                      className="ml-2 cursor-default"
+                    >
+                      <FaInfoCircle className="text-xs text-gray-600" />
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -88,7 +100,7 @@ export default function AddOnsPage() {
       </div>
 
       {/* Navigation Buttons */}
-      <div className="flex justify-center gap-8 mt-6">
+      <div className="flex justify-center gap-8 mt-6 flex-wrap">
         <button
           className={`px-6 py-2 bg-gray-400 text-white ${
             items.some((item) => item.quantity > 0)
@@ -105,10 +117,15 @@ export default function AddOnsPage() {
               ? "hover:bg-gray-800"
               : "bg-gray-400 cursor-not-allowed"
           }`}
-          disabled={!items.some((item) => item.quantity > 0)}
           onClick={() => router.push("/checkout")}
         >
           Next
+        </button>
+        <button
+          className={`px-6 py-2 bg-black text-white hover:bg-gray-800`}
+          onClick={() => router.push("/checkout")}
+        >
+          Skip without add-on services
         </button>
       </div>
     </div>

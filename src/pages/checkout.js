@@ -134,7 +134,7 @@ export default function CheckoutPage() {
 
       {/* Studio Details Section */}
       <div className="bg-white p-6 shadow-sm mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1  md:grid-cols-3 lg:grid-cols-[20%,40% 40%, 5%, 5%] gap-4">
           {/* Studio Name */}
           <div className="flex flex-col gap-1">
             <p className="text-gray-600 text-sm font-semibold">Studio Name</p>

@@ -93,13 +93,13 @@ export function BookingProvider({ children }) {
     {
       id: 13,
       name: "Creative Direction",
-      price: 1500,
+      price: 2500,
       quantity: 0,
       image: "/service/creativedirection.avif",
     },
     {
       id: 14,
-      name: "Moodboards",
+      name: "Moodboard",
       price: 500,
       quantity: 0,
       image: "/service/moodboards.jpg",
