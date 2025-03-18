@@ -50,6 +50,10 @@ const BookingSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  calendarEventId: {
+    type: String,
+    default: "",
+  },
   customerPhone: {
     type: String,
     required: true,

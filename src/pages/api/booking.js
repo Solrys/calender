@@ -1,5 +1,6 @@
 import dbConnect from "@/lib/dbConnect";
 import Booking from "@/models/Booking";
+import { deleteCalendarEvent } from "@/utils/calenderEvent";
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -60,6 +61,20 @@ export default async function handler(req, res) {
       const { id } = req.query;
       if (!id) {
         return res.status(400).json({ message: "Missing booking id" });
+      }
+      const booking = await Booking.findById(id);
+      if (!booking) {
+        return res.status(404).json({ message: "Booking not found" });
+      }
+
+      // If booking has a Google Calendar event, attempt to delete it
+      if (booking.calendarEventId) {
+        try {
+          await deleteCalendarEvent(booking.calendarEventId);
+        } catch (calError) {
+          console.error("Error deleting calendar event:", calError);
+          // You can choose to either continue with deletion or abort here
+        }
       }
       const deletedBooking = await Booking.findByIdAndDelete(id);
       if (!deletedBooking) {

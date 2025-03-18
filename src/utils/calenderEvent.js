@@ -29,3 +29,16 @@ async function createCalendarEvent(eventData) {
 }
 
 export default createCalendarEvent;
+export async function deleteCalendarEvent(eventId) {
+  try {
+    await calendar.events.delete({
+      calendarId: process.env.GOOGLE_CALENDAR_ID, // your calendar id
+      eventId,
+    });
+    console.log("Google Calendar event deleted:", eventId);
+    return true;
+  } catch (error) {
+    console.error("Error deleting event from Google Calendar:", error);
+    throw error;
+  }
+}

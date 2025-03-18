@@ -105,6 +105,9 @@ Customer: ${customerName} (${customerEmail})`,
     try {
       const calendarEvent = await createCalendarEvent(eventData);
       console.log("✅ Google Calendar event created:", calendarEvent.id);
+      await Booking.findByIdAndUpdate(bookingId, {
+        calendarEventId: calendarEvent.id,
+      });
     } catch (calError) {
       console.error("❌ Error creating calendar event:", calError);
       // Optionally handle calendar event errors here
