@@ -199,7 +199,7 @@ export default function CheckoutPage() {
       {/* Addons Section */}
       <div className={styles.addonCard}>
         <div>
-          <h3 className="text-lg font-bold mb-4">Your Addons</h3>
+          <h3 className="text-lg font-bold mb-4">Your Add Ons</h3>
           {items
             .filter((item) => item.quantity > 0)
             .map((item) => (
@@ -265,7 +265,7 @@ export default function CheckoutPage() {
         <h3 className="text-lg font-bold mb-4">Price Summary</h3>
         <div className="flex flex-col gap-2 text-lg">
           <div className="flex justify-between">
-            <p>Add ons</p>
+            <p>Add Ons</p>
             <p>${subtotal.toFixed(2)}</p>
           </div>
           <div className="flex justify-between">

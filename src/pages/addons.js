@@ -3,20 +3,19 @@ import { BookingContext } from "@/context/BookingContext";
 import styles from "@/styles/Addon.module.css";
 import Image from "next/image";
 import { useRouter } from "next/router";
-import { IoInformationCircleOutline } from "react-icons/io5";
+import { MdInfoOutline } from "react-icons/md";
 import Tippy from "@tippyjs/react";
 import "tippy.js/dist/tippy.css";
 
 export default function AddOnsPage() {
-  const { startDate, startTime, endTime, items, updateItemQuantity } =
-    useContext(BookingContext);
+  const { items, updateItemQuantity } = useContext(BookingContext);
   const router = useRouter();
 
   return (
     <div className={styles.wrapper}>
       {/* Add-On Items */}
       <h2 className="text-[22px] sm:text-[32px] font-bold text-center">
-        Optional Add-on Services
+        Optional Add-On Services
       </h2>
       <div className={styles.addonGrid}>
         {items.map((item) => (
@@ -29,17 +28,6 @@ export default function AddOnsPage() {
                 fill
                 className="object-cover"
               />
-              <div className="absolute top-0 right-0 m-2 flex flex-col items-end">
-                <Tippy content={item.description} placement="top">
-                  <span className="bg-white p-[2px] rounded-full">
-                    <IoInformationCircleOutline
-                      size={20}
-                      className="text-xs text-black"
-                    />
-                  </span>
-                </Tippy>
-                {/* Overlay element below the tooltip icon */}
-              </div>
             </div>
 
             {/* Item Name & Price with Description Tooltip */}
@@ -48,6 +36,11 @@ export default function AddOnsPage() {
                 <p className="font-semibold text-sm uppercase cursor-help whitespace-nowrap">
                   {item.name}
                 </p>
+                <Tippy content={item.description} placement="top">
+                  <span className="bg-white p-[2px] rounded-full">
+                    <MdInfoOutline size={20} className="text-xs text-black" />
+                  </span>
+                </Tippy>
               </div>
 
               {/* Quantity Controls */}

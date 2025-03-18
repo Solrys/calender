@@ -242,7 +242,7 @@ export default function BookingPage() {
             </div>
           </div>
           {/* Booking Hours and TimeSlider Section */}
-          <div className="w-full h-full mt-4">
+          <div className="w-full h-full mt-1">
             <div className="w-full mt-1 mb-3">
               <label className="text-xs font-bold mb-1 block">
                 How many hours would you like to rent?
@@ -277,9 +277,9 @@ export default function BookingPage() {
                 </button>
               </div>
             </div>
-            <label className="text-xs font-bold mb-1 block">
+            <label className="text-[12px] font-bold mb-1 block">
               What time wold you like to start on{" "}
-              {startDate ? format(startDate, "EEEE, MMMM d") : ""}
+              {startDate ? format(startDate, "EEEE, MMMM d") : ""}?
             </label>
             {bookingHours <= 0 ? (
               <div className="text-gray-500 w-full h-[80%] bg-[#f8f8f8] flex items-center justify-center text-sm">

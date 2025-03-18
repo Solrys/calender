@@ -17,7 +17,7 @@
   align-items: flex-start;
 }
 .row {
-  width: 60%;
+  width: 62%;
   padding: 20px 40px;
   display: grid;
   grid-template-columns: 100%;
