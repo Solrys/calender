@@ -16,7 +16,7 @@ export default function AddOnsPage() {
     <div className={styles.wrapper}>
       {/* Add-On Items */}
       <h2 className="text-[22px] sm:text-[32px] font-bold text-center">
-        Optional add-on services
+        Optional Add-on Services
       </h2>
       <div className={styles.addonGrid}>
         {items.map((item) => (
