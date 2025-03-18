@@ -3,7 +3,7 @@ import { BookingContext } from "@/context/BookingContext";
 import styles from "@/styles/Addon.module.css";
 import Image from "next/image";
 import { useRouter } from "next/router";
-import { FaInfoCircle } from "react-icons/fa";
+import { IoInformationCircleOutline } from "react-icons/io5";
 import Tippy from "@tippyjs/react";
 import "tippy.js/dist/tippy.css";
 
@@ -31,8 +31,11 @@ export default function AddOnsPage() {
               />
               <div className="absolute top-0 right-0 m-2 flex flex-col items-end">
                 <Tippy content={item.description} placement="top">
-                  <span className="bg-white p-1 rounded-full">
-                    <FaInfoCircle className="text-xs text-gray-600" />
+                  <span className="bg-white p-[2px] rounded-full">
+                    <IoInformationCircleOutline
+                      size={20}
+                      className="text-xs text-black"
+                    />
                   </span>
                 </Tippy>
                 {/* Overlay element below the tooltip icon */}
