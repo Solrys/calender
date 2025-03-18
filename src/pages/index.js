@@ -89,12 +89,25 @@ export default function BookingPage() {
           headers: { "Content-Type": "application/json" },
         });
         const data = await res.json();
-        // Compute blocked times
-        const filteredBookings = (data.bookings || []).filter(
-          (booking) =>
+        // Compute blocked times with special handling for the fourth studio.
+        const filteredBookings = (data.bookings || []).filter((booking) => {
+          if (
+            selectedStudio.name === "BOTH THE LAB & THE EXTENSION FOR EVENTS"
+          ) {
+            // Combine bookings for THE LAB, THE EXTENSION, and BOTH option.
+            return (
+              (booking.studio === "THE LAB" ||
+                booking.studio === "THE EXTENSION" ||
+                booking.studio === "BOTH THE LAB & THE EXTENSION FOR EVENTS") &&
+              format(new Date(booking.startDate), "yyyy-MM-dd") ===
+                formattedDate
+            );
+          }
+          return (
             booking.studio === selectedStudio.name &&
             format(new Date(booking.startDate), "yyyy-MM-dd") === formattedDate
-        );
+          );
+        });
         const blockedByDate = computeBlockedTimesByDate(filteredBookings);
         setBlockedTimesByDate(blockedByDate);
       } catch (error) {

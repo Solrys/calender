@@ -36,7 +36,6 @@ export default function BookingDashboard() {
         const data = await res.json();
         console.log("✅ Fetched bookings:", data);
         if (data && Array.isArray(data.bookings)) {
-          // Sort bookings in descending order by startDate by default.
           const sortedBookings = data.bookings.sort(
             (a, b) => new Date(b.startDate) - new Date(a.startDate)
           );
@@ -67,7 +66,6 @@ export default function BookingDashboard() {
       );
     }
 
-    // Sorting mechanism
     if (sortOption === "date-asc") {
       filtered.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
     } else if (sortOption === "date-desc") {
@@ -98,18 +96,12 @@ export default function BookingDashboard() {
       return;
     }
 
-    // Get today's local date (without the time)
     const exportDate = new Date().toLocaleDateString();
-
-    // Create an export header row without the Surcharge column.
     const exportHeader = `Exported On: ${exportDate}\n\n`;
-
-    // Added Payment Status column after Studio.
     const headers =
       "Booking Time,Customer Name,Customer Phone,Customer Email,Studio,Payment Status,Date,Start Time,End Time,Subtotal,Total,Add‑ons,Total Hours\n";
 
     const csvRows = filteredBookings.map((b) => {
-      // Build add-ons string from items array.
       const addOns =
         b.items && b.items.length > 0
           ? b.items
@@ -118,7 +110,6 @@ export default function BookingDashboard() {
               .join("; ")
           : "None";
 
-      // Compute total hours using date-fns parse (using startDate for both start and end times).
       let totalHours = "N/A";
       try {
         const startDateTime = parse(
@@ -155,11 +146,33 @@ export default function BookingDashboard() {
     saveAs(blob, fileName);
   };
 
+  // Cancel a booking by calling the DELETE endpoint.
+  const cancelBooking = async (bookingId) => {
+    if (!confirm("Are you sure you want to cancel this booking?")) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/booking?id=${bookingId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        throw new Error("Failed to cancel booking");
+      }
+      const data = await res.json();
+      alert("Booking cancelled successfully");
+      // Remove the cancelled booking from state
+      setBookings((prev) => prev.filter((b) => b._id !== bookingId));
+      setFilteredBookings((prev) => prev.filter((b) => b._id !== bookingId));
+    } catch (error) {
+      console.error("Error cancelling booking", error);
+      alert("Failed to cancel booking. Please try again.");
+    }
+  };
+
   return (
     <div className="p-6">
       <h2 className="text-xl font-bold mb-4">Bookings Dashboard</h2>
       {/* Inline filter & sort controls */}
-      {/* Desktop view (md and up): one row */}
       <div className="hidden md:flex items-center gap-4 mb-4 flex-nowrap">
         <Select onValueChange={(value) => setMonthFilter(value)}>
           <SelectTrigger>
@@ -201,7 +214,7 @@ export default function BookingDashboard() {
         <Button onClick={exportCSV}>Export CSV</Button>
       </div>
 
-      {/* Mobile view (below md): two rows of 3 items each */}
+      {/* Mobile view filters */}
       <div className="md:hidden grid grid-cols-3 gap-4 mb-4">
         <Select onValueChange={(value) => setMonthFilter(value)}>
           <SelectTrigger>
@@ -243,7 +256,7 @@ export default function BookingDashboard() {
         <Button onClick={exportCSV}>Export</Button>
       </div>
 
-      {/* Responsive table container */}
+      {/* Bookings table */}
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
@@ -261,18 +274,18 @@ export default function BookingDashboard() {
               <TableHead>Total</TableHead>
               <TableHead>Add‑ons</TableHead>
               <TableHead>Total Hours</TableHead>
+              <TableHead>Cancel</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredBookings.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={13} className="text-center text-gray-500">
+                <TableCell colSpan={14} className="text-center text-gray-500">
                   No bookings found.
                 </TableCell>
               </TableRow>
             ) : (
               filteredBookings.map((booking) => {
-                // Compute total hours (using startDate for both start and end time)
                 let totalHours = "N/A";
                 try {
                   const startDateTime = parse(
@@ -321,6 +334,11 @@ export default function BookingDashboard() {
                       <AddonsDisplay items={booking.items} />
                     </TableCell>
                     <TableCell>{totalHours} hours</TableCell>
+                    <TableCell>
+                      <Button onClick={() => cancelBooking(booking._id)}>
+                        Cancel
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 );
               })

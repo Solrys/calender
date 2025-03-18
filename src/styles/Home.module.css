@@ -74,6 +74,9 @@
   .row {
     width: 100%;
   }
+  .leftSide {
+    height: 57vh;
+  }
 }
 @media (max-width: 961px) {
   .row {
