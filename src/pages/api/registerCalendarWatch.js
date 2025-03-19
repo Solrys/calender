@@ -3,15 +3,7 @@ import { google } from "googleapis";
 import { v4 as uuidv4 } from "uuid";
 
 // Clean up the value in case it's wrapped with quotes
-let serviceAccountKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
-if (
-  (serviceAccountKey.startsWith('"') && serviceAccountKey.endsWith('"')) ||
-  (serviceAccountKey.startsWith("'") && serviceAccountKey.endsWith("'"))
-) {
-  serviceAccountKey = serviceAccountKey.slice(1, -1);
-}
-
-const serviceAccount = JSON.parse(serviceAccountKey);
+const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY);
 
 export default async function handler(req, res) {
   try {
