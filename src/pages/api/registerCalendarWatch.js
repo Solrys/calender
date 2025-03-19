@@ -2,10 +2,11 @@
 import { google } from "googleapis";
 import { v4 as uuidv4 } from "uuid";
 
+const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY);
 export default async function handler(req, res) {
   try {
     const auth = new google.auth.GoogleAuth({
-      keyFile: "service-account.json", // Update with your service account JSON path
+      keyFile: serviceAccount, // Update with your service account JSON path
       scopes: ["https://www.googleapis.com/auth/calendar"],
     });
 
