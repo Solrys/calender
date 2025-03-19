@@ -4,7 +4,15 @@ import path from "path";
 // Define the scope required for Calendar API
 const SCOPES = ["https://www.googleapis.com/auth/calendar"];
 
-const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY);
+let serviceAccountKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
+
+// Remove wrapping quotes if present
+if (
+  (serviceAccountKey.startsWith('"') && serviceAccountKey.endsWith('"')) ||
+  (serviceAccountKey.startsWith("'") && serviceAccountKey.endsWith("'"))
+) {
+  serviceAccountKey = serviceAccountKey.slice(1, -1);
+}
 // console.log(serviceAccount, "service Account");
 
 async function createCalendarEvent(eventData) {
