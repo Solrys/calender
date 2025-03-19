@@ -4,21 +4,10 @@ import path from "path";
 // Define the scope required for Calendar API
 const SCOPES = ["https://www.googleapis.com/auth/calendar"];
 
-let serviceAccountKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
-
-// Remove wrapping quotes if present
-if (
-  (serviceAccountKey.startsWith('"') && serviceAccountKey.endsWith('"')) ||
-  (serviceAccountKey.startsWith("'") && serviceAccountKey.endsWith("'"))
-) {
-  serviceAccountKey = serviceAccountKey.slice(1, -1);
-}
-// console.log(serviceAccount, "service Account");
-
 async function createCalendarEvent(eventData) {
-  // const keyFilePath = path.resolve(process.cwd(), "service-account.json");
+  const keyFilePath = path.resolve(process.cwd(), "service-account.json");
   const auth = new google.auth.GoogleAuth({
-    keyFile: serviceAccountKey, // Your service account key file
+    keyFile: "service-account.json", // Your service account key file
     scopes: SCOPES,
   });
 
@@ -31,7 +20,8 @@ async function createCalendarEvent(eventData) {
   const calendar = google.calendar("v3");
 
   const response = await calendar.events.insert({
-    calendarId: "primary", // Replace with your calendar ID if different
+    calendarId:
+      "c_b8b92cc3940cbfcfb4cfcf31fbf2530b8f28c4626932af48d0c2c6f7f92d8b2f@group.calendar.google.com", // Replace with your calendar ID if different
     requestBody: eventData,
   });
 
