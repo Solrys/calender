@@ -4,10 +4,13 @@ import path from "path";
 // Define the scope required for Calendar API
 const SCOPES = ["https://www.googleapis.com/auth/calendar"];
 
+const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY);
+console.log(serviceAccount, "service Account");
+
 async function createCalendarEvent(eventData) {
   const keyFilePath = path.resolve(process.cwd(), "service-account.json");
   const auth = new google.auth.GoogleAuth({
-    keyFile: "service-account.json", // Your service account key file
+    keyFile: serviceAccount, // Your service account key file
     scopes: SCOPES,
   });
 

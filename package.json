@@ -32,7 +32,8 @@
     "stripe": "^17.7.0",
     "tailwind-merge": "^3.0.2",
     "tailwindcss-animate": "^1.0.7",
-    "tippy.js": "^6.3.7"
+    "tippy.js": "^6.3.7",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

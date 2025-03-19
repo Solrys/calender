@@ -1,5 +1,6 @@
 // pages/api/registerCalendarWatch.js
 import { google } from "googleapis";
+import { v4 as uuidv4 } from "uuid";
 
 export default async function handler(req, res) {
   try {
@@ -14,7 +15,7 @@ export default async function handler(req, res) {
     });
 
     const calendarId = process.env.GOOGLE_CALENDAR_ID;
-    const channelId = "my-unique-channel-id-12345"; // Ensure this ID is unique
+    const channelId = uuidv4(); // Generate a new unique channel id each time
     const webhookUrl = process.env.CALENDAR_WEBHOOK_URL; // e.g., https://yourdomain.com/api/google-calendar-webhook
 
     const channelConfig = {
