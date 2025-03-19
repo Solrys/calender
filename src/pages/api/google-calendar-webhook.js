@@ -4,10 +4,19 @@ import dbConnect from "@/lib/dbConnect";
 import Booking from "@/models/Booking";
 import { createBookingFromCalendarEvent } from "@/utils/createBookingFromEvent";
 
+// Parse and clean up your service account JSON from the environment variable
+let serviceAccountKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
+if (
+  (serviceAccountKey.startsWith('"') && serviceAccountKey.endsWith('"')) ||
+  (serviceAccountKey.startsWith("'") && serviceAccountKey.endsWith("'"))
+) {
+  serviceAccountKey = serviceAccountKey.slice(1, -1);
+}
+const serviceAccount = JSON.parse(serviceAccountKey);
+
 export default async function handler(req, res) {
   await dbConnect();
 
-  // Allow only POST requests (Google sends push notifications as POST)
   if (req.method !== "POST") {
     return res.status(405).json({ message: "Method Not Allowed" });
   }
@@ -15,21 +24,25 @@ export default async function handler(req, res) {
   try {
     console.log("🔔 Received Google Calendar push notification:", req.headers);
 
-    // Initialize Google Calendar client.
+    // Use service account credentials for proper authentication
+    const auth = new google.auth.GoogleAuth({
+      credentials: serviceAccount,
+      scopes: ["https://www.googleapis.com/auth/calendar"],
+    });
+
     const calendar = google.calendar({
       version: "v3",
-      auth: process.env.GOOGLE_CALENDAR_API_KEY, // Ensure you have the proper credentials
+      auth,
     });
 
     const calendarId = process.env.GOOGLE_CALENDAR_ID;
     const now = new Date();
-    // Define a time window—for example, from now to 30 days ahead.
     const timeMin = now.toISOString();
     const timeMax = new Date(
       now.getTime() + 30 * 24 * 60 * 60 * 1000
     ).toISOString();
 
-    // Fetch events within the time window.
+    // Fetch events within the time window
     const calendarRes = await calendar.events.list({
       calendarId,
       timeMin,
@@ -41,14 +54,13 @@ export default async function handler(req, res) {
     const events = calendarRes.data.items || [];
     console.log(`📅 Fetched ${events.length} events from Google Calendar`);
 
-    // Process each event.
+    // Process each event
     for (const event of events) {
-      // Check if a booking with this calendar event ID already exists.
+      // Check if booking already exists by calendarEventId
       const existingBooking = await Booking.findOne({
         calendarEventId: event.id,
       });
       if (!existingBooking) {
-        // Create a new booking from the event.
         const newBooking = await createBookingFromCalendarEvent(event);
         console.log("Created new booking from event:", newBooking);
       } else {
