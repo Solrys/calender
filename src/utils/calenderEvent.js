@@ -20,8 +20,7 @@ async function createCalendarEvent(eventData) {
   const calendar = google.calendar("v3");
 
   const response = await calendar.events.insert({
-    calendarId:
-      "c_8891de9cc21f58309989f6c1304b8b535ac24a9b87959fdf4bed17536ebc733f@group.calendar.google.com", // Replace with your calendar ID if different
+    calendarId: "primary", // Replace with your calendar ID if different
     requestBody: eventData,
   });
 

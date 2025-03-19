@@ -1,67 +1,21 @@
+// models/Booking.js
 import mongoose from "mongoose";
 
 const BookingSchema = new mongoose.Schema({
-  studio: {
-    type: String,
-    required: true,
-  },
-  startDate: {
-    type: Date,
-    required: true,
-  },
-  startTime: {
-    type: String,
-    required: true,
-  },
-  endTime: {
-    type: String,
-    required: true,
-  },
-  items: [
-    {
-      id: Number,
-      name: String,
-      price: Number,
-      quantity: Number,
-      image: String,
-    },
-  ],
-  subtotal: {
-    type: Number,
-    required: true,
-  },
-  studioCost: {
-    type: Number,
-    required: true,
-  },
-  estimatedTotal: {
-    type: Number,
-    required: true,
-  },
-  paymentStatus: {
-    type: String,
-    default: "pending", // "pending" until payment is verified
-  },
-  customerName: {
-    type: String,
-    required: true,
-  },
-  customerEmail: {
-    type: String,
-    required: true,
-  },
-  calendarEventId: {
-    type: String,
-    default: "",
-  },
-  customerPhone: {
-    type: String,
-    required: true,
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
+  studio: { type: String, required: true },
+  startDate: { type: Date, required: true },
+  startTime: { type: String, required: true },
+  endTime: { type: String, required: true },
+  items: { type: Array, default: [] },
+  subtotal: { type: Number, default: 0 },
+  studioCost: { type: Number, default: 0 },
+  estimatedTotal: { type: Number, default: 0 },
+  paymentStatus: { type: String, default: "manual" }, // "manual" for direct calendar events
+  customerName: { type: String, default: "" },
+  customerEmail: { type: String, default: "" },
+  customerPhone: { type: String, default: "" },
+  calendarEventId: { type: String, default: "" },
+  createdAt: { type: Date, default: Date.now },
 });
 
 export default mongoose.models.Booking ||

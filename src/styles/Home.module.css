@@ -17,7 +17,7 @@
   align-items: flex-start;
 }
 .row {
-  width: 62%;
+  width: 67%;
   padding: 20px 40px;
   display: grid;
   grid-template-columns: 100%;
@@ -36,7 +36,7 @@
   display: grid;
   grid-template-columns: 59% 37%;
   gap: 30px;
-  height: 53vh;
+  height: 100%;
   align-items: center;
   justify-content: flex-start;
 }
@@ -75,7 +75,7 @@
     width: 100%;
   }
   .leftSide {
-    height: 57vh;
+    height: 100%;
   }
 }
 @media (max-width: 961px) {
