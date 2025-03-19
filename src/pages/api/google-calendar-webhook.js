@@ -4,7 +4,7 @@ import dbConnect from "@/lib/dbConnect";
 import Booking from "@/models/Booking";
 import { createBookingFromCalendarEvent } from "@/utils/createBookingFromEvent";
 
-// Parse and clean up your service account JSON from the environment variable
+// Clean up and parse the service account JSON from the environment variable
 let serviceAccountKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
 if (
   (serviceAccountKey.startsWith('"') && serviceAccountKey.endsWith('"')) ||
@@ -42,7 +42,7 @@ export default async function handler(req, res) {
       now.getTime() + 30 * 24 * 60 * 60 * 1000
     ).toISOString();
 
-    // Fetch events within the time window
+    // Fetch events from the calendar in a defined time window
     const calendarRes = await calendar.events.list({
       calendarId,
       timeMin,
@@ -54,9 +54,8 @@ export default async function handler(req, res) {
     const events = calendarRes.data.items || [];
     console.log(`📅 Fetched ${events.length} events from Google Calendar`);
 
-    // Process each event
+    // Process each event: create booking if not exists, or log that it exists
     for (const event of events) {
-      // Check if booking already exists by calendarEventId
       const existingBooking = await Booking.findOne({
         calendarEventId: event.id,
       });
@@ -67,6 +66,15 @@ export default async function handler(req, res) {
         console.log(`Booking for event ${event.id} already exists.`);
       }
     }
+
+    // Identify and delete bookings whose calendar events have been deleted
+    const currentEventIds = events.map((event) => event.id);
+    const removedResult = await Booking.deleteMany({
+      calendarEventId: { $exists: true, $nin: currentEventIds },
+    });
+    console.log(
+      `Deleted ${removedResult.deletedCount} bookings that no longer exist in the calendar.`
+    );
 
     res.status(200).json({ message: "Calendar events processed" });
   } catch (error) {
