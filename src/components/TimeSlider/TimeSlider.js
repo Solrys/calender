@@ -40,21 +40,31 @@ export default function TimeSlider({
 }) {
   // Compute the available times based on the bookingHours requirement.
   const availableTimes = useMemo(() => {
-    if (!bookingHours || bookingHours <= 0) return ALL_TIMES;
+    // Start with all times or filtered by bookingHours
+    let times = ALL_TIMES;
+    if (bookingHours > 0) {
+      times = ALL_TIMES.filter((slot) => {
+        const slotMins = timeStringToMinutes(slot);
+        // Ensure the entire block fits before 11:00 PM
+        if (slotMins + bookingHours * 60 > 23 * 60) return false;
+        // Check each hour in the block to ensure it's not blocked.
+        for (let i = 0; i < bookingHours; i++) {
+          const checkTime = slotMins + i * 60;
+          if (blockedTimes.has(checkTime)) return false;
+        }
+        return true;
+      });
+    }
 
-    return ALL_TIMES.filter((slot) => {
-      const slotMins = timeStringToMinutes(slot);
-      // Ensure the entire block fits before 11:00 PM
-      if (slotMins + bookingHours * 60 > 23 * 60) return false;
+    // If selected date is today, filter out slots that have already passed.
+    if (selectedDate && isToday(selectedDate)) {
+      const now = new Date();
+      const currentMins = now.getHours() * 60 + now.getMinutes();
+      times = times.filter((slot) => timeStringToMinutes(slot) >= currentMins);
+    }
 
-      // Check each hour in the block to ensure it's not blocked.
-      for (let i = 0; i < bookingHours; i++) {
-        const checkTime = slotMins + i * 60;
-        if (blockedTimes.has(checkTime)) return false;
-      }
-      return true;
-    });
-  }, [bookingHours, blockedTimes]);
+    return times;
+  }, [bookingHours, blockedTimes, selectedDate]);
 
   // Keep track of selected index
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -73,7 +83,7 @@ export default function TimeSlider({
     } else {
       onChange(""); // No available slots
     }
-  }, [availableTimes, onChange]);
+  }, [availableTimes, onChange, value]);
 
   // Scroll to the selected time slot when currentIndex changes
   useEffect(() => {
@@ -107,12 +117,11 @@ export default function TimeSlider({
           return (
             <div
               key={slot}
-              className={` grid   ${
+              className={`grid ${
                 isSelected ? "grid-cols-2" : "grid-cols-1"
               } gap-4`}
             >
               <div
-                key={slot}
                 data-index={i}
                 onClick={() => {
                   setCurrentIndex(i);
@@ -124,7 +133,7 @@ export default function TimeSlider({
               </div>
               {isSelected && (
                 <button
-                  className="p-2 rounded text-white bg-[#000] fade-in h-10 border-0 "
+                  className="p-2 rounded text-white bg-[#000] fade-in h-10 border-0"
                   onClick={handleNext}
                 >
                   Next

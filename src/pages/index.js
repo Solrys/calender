@@ -109,6 +109,8 @@ export default function BookingPage() {
           );
         });
         const blockedByDate = computeBlockedTimesByDate(filteredBookings);
+        console.log(blockedByDate, "hello");
+
         setBlockedTimesByDate(blockedByDate);
       } catch (error) {
         console.error("Error fetching bookings:", error);
