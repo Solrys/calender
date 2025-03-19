@@ -5,7 +5,7 @@ import path from "path";
 const SCOPES = ["https://www.googleapis.com/auth/calendar"];
 
 const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY);
-console.log(serviceAccount, "service Account");
+// console.log(serviceAccount, "service Account");
 
 async function createCalendarEvent(eventData) {
   const keyFilePath = path.resolve(process.cwd(), "service-account.json");
