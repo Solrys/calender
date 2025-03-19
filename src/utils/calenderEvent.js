@@ -8,7 +8,7 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY);
 // console.log(serviceAccount, "service Account");
 
 async function createCalendarEvent(eventData) {
-  const keyFilePath = path.resolve(process.cwd(), "service-account.json");
+  // const keyFilePath = path.resolve(process.cwd(), "service-account.json");
   const auth = new google.auth.GoogleAuth({
     keyFile: serviceAccount, // Your service account key file
     scopes: SCOPES,
