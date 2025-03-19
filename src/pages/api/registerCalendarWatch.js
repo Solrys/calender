@@ -1,14 +1,22 @@
-// pages/api/registerCalendarWatch.js
 import { google } from "googleapis";
 import { v4 as uuidv4 } from "uuid";
 
-// Clean up the value in case it's wrapped with quotes
-const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY);
+// Clean up the environment variable in case it's wrapped with quotes
+let serviceAccountKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
+if (
+  (serviceAccountKey.startsWith('"') && serviceAccountKey.endsWith('"')) ||
+  (serviceAccountKey.startsWith("'") && serviceAccountKey.endsWith("'"))
+) {
+  serviceAccountKey = serviceAccountKey.slice(1, -1);
+}
+const serviceAccount = JSON.parse(serviceAccountKey);
 
 export default async function handler(req, res) {
+  console.log(serviceAccount, serviceAccountKey);
+
   try {
     const auth = new google.auth.GoogleAuth({
-      keyFile: serviceAccount, // Update with your service account JSON path
+      credentials: serviceAccount, // Use credentials instead of keyFile
       scopes: ["https://www.googleapis.com/auth/calendar"],
     });
 
