@@ -13,9 +13,9 @@ if (
 }
 const serviceAccount = JSON.parse(serviceAccountKey);
 async function createCalendarEvent(eventData) {
-  const keyFilePath = path.resolve(process.cwd(), "service-account.json");
+  // const keyFilePath = path.resolve(process.cwd(), "service-account.json");
   const auth = new google.auth.GoogleAuth({
-    keyFile: serviceAccount, // Your service account key file
+    credentials: serviceAccount, // Your service account key file
     scopes: SCOPES,
   });
 
