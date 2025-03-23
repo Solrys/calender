@@ -14,7 +14,7 @@ const BookingSchema = new mongoose.Schema({
   customerName: { type: String, default: "" },
   customerEmail: { type: String, default: "" },
   customerPhone: { type: String, default: "" },
-  calendarEventId: { type: String, default: "" },
+  calendarEventId: { type: String, unique: true, sparse: true },
   createdAt: { type: Date, default: Date.now },
 });
 

@@ -56,15 +56,16 @@ export default async function handler(req, res) {
 
     // Process each event: create booking if not exists, or log that it exists
     for (const event of events) {
-      const existingBooking = await Booking.findOne({
-        calendarEventId: event.id,
-      });
-      if (!existingBooking) {
-        const newBooking = await createBookingFromCalendarEvent(event);
-        console.log("Created new booking from event:", newBooking);
-      } else {
-        console.log(`Booking for event ${event.id} already exists.`);
-      }
+      // Build the data to upsert (this should match your booking schema)
+      const bookingData = await createBookingFromCalendarEvent(event);
+
+      // Use updateOne with upsert: true to avoid duplicates
+      await Booking.updateOne(
+        { calendarEventId: event.id }, // filter by event id
+        { $set: bookingData }, // update with new data
+        { upsert: true } // insert if not found
+      );
+      console.log(`Upserted booking for event ${event.id}`);
     }
 
     // Identify and delete bookings whose calendar events have been deleted
