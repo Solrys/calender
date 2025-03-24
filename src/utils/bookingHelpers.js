@@ -77,8 +77,8 @@ export function computeBlockedTimesByDate(bookings) {
     }
     const start = timeStringToMinutes(booking.startTime);
     const end = timeStringToMinutes(booking.endTime);
-    // Add each 30-minute slot between start and end.
-    for (let t = start; t < end; t += 30) {
+    // Add each 30-minute slot from the booking start until (end + 30 minutes)
+    for (let t = start; t < end + 30; t += 30) {
       blocked[dateKey].add(t);
     }
   });

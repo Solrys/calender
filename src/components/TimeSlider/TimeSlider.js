@@ -1,20 +1,21 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { isToday } from "date-fns";
 
-// Generate an array of times in 1-hour increments from 6:00 AM to 11:00 PM.
+// Generate an array of times in 30-minute increments from 6:00 AM to 11:30 PM.
 function generateTimes() {
   const times = [];
-  for (let hour = 6; hour <= 23; hour++) {
+  for (let hour = 6; hour < 24; hour++) {
     const h12 = hour % 12 === 0 ? 12 : hour % 12;
     const period = hour < 12 ? "AM" : "PM";
     times.push(`${h12}:00 ${period}`);
+    times.push(`${h12}:30 ${period}`);
   }
   return times;
 }
 
 const ALL_TIMES = generateTimes();
 
-// Convert a time string like "11:00 AM" to minutes after midnight.
+// Convert a time string like "11:00 AM" or "11:30 AM" to minutes after midnight.
 function timeStringToMinutes(timeStr) {
   const [time, period] = timeStr.split(" ");
   const [hourStr, minuteStr] = time.split(":");
@@ -26,7 +27,7 @@ function timeStringToMinutes(timeStr) {
 }
 
 /**
- * TimeSlider Component
+ * TimeSlider Component with a 30-minute buffer between bookings.
  */
 export default function TimeSlider({
   title,
@@ -38,54 +39,51 @@ export default function TimeSlider({
   handleNext,
   bookingHours = 0, // booking hours required for continuous availability
 }) {
-  // Compute the available times based on the bookingHours requirement.
+  // Compute the available times based on bookingHours.
+  // If bookingHours > 0, filter out slots that can't accommodate the entire block.
   const availableTimes = useMemo(() => {
-    // Start with all times or filtered by bookingHours
     let times = ALL_TIMES;
     if (bookingHours > 0) {
       times = ALL_TIMES.filter((slot) => {
         const slotMins = timeStringToMinutes(slot);
-        // Ensure the entire block fits before 11:00 PM
-        if (slotMins + bookingHours * 60 > 23 * 60) return false;
-        // Check each hour in the block to ensure it's not blocked.
-        for (let i = 0; i < bookingHours; i++) {
-          const checkTime = slotMins + i * 60;
+        // Ensure the entire block fits before midnight (24:00)
+        if (slotMins + bookingHours * 60 > 24 * 60) return false;
+        // Since our times are in 30-minute increments, check every 30-minute step.
+        for (let i = 0; i < bookingHours * 2; i++) {
+          const checkTime = slotMins + i * 30;
           if (blockedTimes.has(checkTime)) return false;
         }
         return true;
       });
     }
-
-    // If selected date is today, filter out slots that have already passed.
+    // For today, filter out times that have already passed.
     if (selectedDate && isToday(selectedDate)) {
       const now = new Date();
       const currentMins = now.getHours() * 60 + now.getMinutes();
       times = times.filter((slot) => timeStringToMinutes(slot) >= currentMins);
     }
-
     return times;
   }, [bookingHours, blockedTimes, selectedDate]);
 
-  // Keep track of selected index
+  // Track selected index.
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // Scroll container reference
+  // Scroll container reference.
   const containerRef = useRef(null);
 
-  // Reset selected time if the previous selection is no longer available
+  // Reset selected time if the current one is no longer available.
   useEffect(() => {
     if (availableTimes.length > 0) {
-      // Ensure the selected time is within the available options
       if (!availableTimes.includes(value)) {
         setCurrentIndex(0);
-        onChange(availableTimes[0]); // Auto-select the first available slot
+        onChange(availableTimes[0]); // Auto-select first available slot.
       }
     } else {
-      onChange(""); // No available slots
+      onChange("");
     }
   }, [availableTimes, onChange, value]);
 
-  // Scroll to the selected time slot when currentIndex changes
+  // Scroll into view when currentIndex changes (desktop only).
   useEffect(() => {
     if (!isMobile && containerRef.current) {
       const slotElement = containerRef.current.querySelector(
@@ -97,7 +95,6 @@ export default function TimeSlider({
     }
   }, [currentIndex, isMobile]);
 
-  // If no slots are available, show a message.
   if (availableTimes.length === 0) {
     return (
       <div className="text-red-500 font-bold">
@@ -133,7 +130,7 @@ export default function TimeSlider({
               </div>
               {isSelected && (
                 <button
-                  className="p-2 rounded text-white bg-[#000] fade-in h-10 border-0"
+                  className="p-2 rounded text-white bg-[#000] h-10 border-0"
                   onClick={handleNext}
                 >
                   Next
