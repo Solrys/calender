@@ -79,29 +79,31 @@ export default async function handler(req, res) {
     // Format startDate to get just the date portion (YYYY-MM-DD)
     const formattedDate = format(new Date(startDate), "yyyy-MM-dd");
 
-    // Prepare event data using the formatted date and converted times
+    // Build start and end ISO strings with the Eastern Time offset:
+    const startISO = new Date(
+      formattedDate + "T" + convertTo24Hour(startTime) + "-04:00"
+    ).toISOString();
+    const endISO = new Date(
+      formattedDate + "T" + convertTo24Hour(endTime) + "-04:00"
+    ).toISOString();
+
     const eventData = {
       summary: `Booking for ${studio}`,
-      location: "Your studio location", // Optionally update dynamically
+      location: "Your studio location",
       description: `Booking details:
 Date: ${formattedDate}
 Start: ${startTime}
 End: ${endTime}
 Customer: ${customerName} (${customerEmail})`,
       start: {
-        dateTime: new Date(
-          formattedDate + "T" + convertTo24Hour(startTime)
-        ).toISOString(),
-        timeZone: "America/New_York", // Adjust as needed
+        dateTime: startISO,
+        timeZone: "America/New_York",
       },
       end: {
-        dateTime: new Date(
-          formattedDate + "T" + convertTo24Hour(endTime)
-        ).toISOString(),
-        timeZone: "America/New_York", // Adjust as needed
+        dateTime: endISO,
+        timeZone: "America/New_York",
       },
     };
-
     try {
       const calendarEvent = await createCalendarEvent(eventData);
       console.log("✅ Google Calendar event created:", calendarEvent.id);
