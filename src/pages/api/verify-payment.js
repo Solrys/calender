@@ -74,6 +74,7 @@ export default async function handler(req, res) {
       endTime,
       customerName,
       customerEmail,
+      customerPhone,
     } = updatedBooking;
 
     // Format startDate to get just the date portion (YYYY-MM-DD)
@@ -103,6 +104,7 @@ Customer: ${customerName} (${customerEmail})`,
         dateTime: endISO,
         timeZone: "America/New_York",
       },
+      phone: customerPhone,
     };
     try {
       const calendarEvent = await createCalendarEvent(eventData);

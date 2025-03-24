@@ -74,6 +74,9 @@
   .row {
     width: 100%;
   }
+  .wrapper {
+    padding: 40px 20px;
+  }
   .leftSide {
     height: 100%;
   }
