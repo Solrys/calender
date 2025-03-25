@@ -359,10 +359,17 @@ export default function CheckoutPage() {
               <p>
                 <strong>2. CANCELLATION POLICY</strong>
                 <br />
-                • Cancellations made at least 48 hours before the scheduled
-                rental will receive a full refund.
-                <br />• Cancellations made within 48 hours of the rental date
-                are non-refundable.
+                <strong>Cancellation Policy:</strong>
+                <br />
+                • Unfortunately, we do not offer any refunds or credit for
+                cancellations. All payments are final.
+                <br />
+                <strong>Rescheduling Policy:</strong>
+                <br />
+                • There is no fee or penalty for rescheduling your booking if
+                the request is made at least 48 hours in advance.
+                <br />• We are unable to accommodate any changes within 48 hours
+                of your scheduled booking. Please contact us to reschedule.
               </p>
 
               <p>
@@ -380,15 +387,20 @@ export default function CheckoutPage() {
                 • Rentals must adhere to the agreed-upon time; any overtime will
                 incur additional fees.
                 <br />
-                • No glitter, confetti, or powder is allowed for shoots.
+                • No glitter, confetti, or powder is allowed for shoots, as
+                these materials are extremely difficult to clean.
+                <br />
+                • If anything is broken, please notify us immediately. It may
+                not be a big deal, but we want to be aware.
                 <br />
                 • Cameras are on at all times. By renting our studio(s), you
-                agree to be recorded and held liable for any property damage.
+                agree to be recorded and held liable for any property damage
+                that results from you or your team’s negligence.
                 <br />
                 • A cleaning fee of $180.00 will be charged if the rented space
                 isn't left as found.
                 <br />• A fee of $350.00 will be charged for any damages to the
-                furniture.
+                furniture (dirt or spills).
               </p>
 
               <p>
@@ -401,10 +413,14 @@ export default function CheckoutPage() {
                 belongings.
                 <br />
                 • THE SPACES is not responsible for any accidents, injuries, or
-                falls during the rental period.
+                falls, including but not limited to trips or falls on stairs,
+                during the rental period. Renters and their guests assume all
+                risks associated with accessing the studio(s) spaces.
                 <br />
                 • Renters and their guests are solely responsible for parking
-                and securing their vehicles.
+                and securing their vehicles. THE SPACES is not liable for any
+                damage, theft, towing, or loss related to vehicles parked on or
+                near the premises.
                 <br />• Renters agree to indemnify and hold THE SPACES harmless
                 from any claims or damages resulting from their use of the
                 space(s).
@@ -415,9 +431,12 @@ export default function CheckoutPage() {
                 <br />
                 • Renters are responsible for any damage to the studio(s),
                 equipment, or property.
-                <br />• If a security deposit is required, it will be refunded
-                within seven days after the rental, provided no damages or
-                violations occur.
+                <br />
+                • If a security deposit is required, it will be refunded within
+                seven days after the rental, provided no damages or violations
+                occur.
+                <br />• For events and larger productions, a security deposit of
+                $1,000 is required.
               </p>
 
               <p>
