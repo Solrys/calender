@@ -1,7 +1,7 @@
 import { google } from "googleapis";
 import { v4 as uuidv4 } from "uuid";
 
-// Clean up the environment variable in case it's wrapped with quotes
+// Clean up the service account key
 let serviceAccountKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
 if (
   (serviceAccountKey.startsWith('"') && serviceAccountKey.endsWith('"')) ||
@@ -12,11 +12,9 @@ if (
 const serviceAccount = JSON.parse(serviceAccountKey);
 
 export default async function handler(req, res) {
-  console.log(serviceAccount, serviceAccountKey);
-
   try {
     const auth = new google.auth.GoogleAuth({
-      credentials: serviceAccount, // Use credentials instead of keyFile
+      credentials: serviceAccount,
       scopes: ["https://www.googleapis.com/auth/calendar"],
     });
 
@@ -26,7 +24,7 @@ export default async function handler(req, res) {
     });
 
     const calendarId = process.env.GOOGLE_CALENDAR_ID;
-    const channelId = uuidv4(); // Generate a new unique channel id each time
+    const channelId = uuidv4(); // generate a unique channel ID
     const webhookUrl = process.env.CALENDAR_WEBHOOK_URL; // e.g., https://yourdomain.com/api/google-calendar-webhook
 
     const channelConfig = {

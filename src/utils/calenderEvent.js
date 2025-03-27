@@ -1,5 +1,4 @@
 import { google } from "googleapis";
-import path from "path";
 
 // Define the scope required for Calendar API
 const SCOPES = ["https://www.googleapis.com/auth/calendar"];

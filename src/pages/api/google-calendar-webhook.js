@@ -1,4 +1,3 @@
-// pages/api/google-calendar-webhook.js
 import { google } from "googleapis";
 import dbConnect from "@/lib/dbConnect";
 import Booking from "@/models/Booking";
@@ -24,7 +23,7 @@ export default async function handler(req, res) {
   try {
     console.log("🔔 Received Google Calendar push notification:", req.headers);
 
-    // Use service account credentials for proper authentication
+    // Authenticate using the service account
     const auth = new google.auth.GoogleAuth({
       credentials: serviceAccount,
       scopes: ["https://www.googleapis.com/auth/calendar"],
@@ -42,7 +41,7 @@ export default async function handler(req, res) {
       now.getTime() + 30 * 24 * 60 * 60 * 1000
     ).toISOString();
 
-    // Fetch events from the calendar in a defined time window
+    // Fetch events from the calendar within the desired time window
     const calendarRes = await calendar.events.list({
       calendarId,
       timeMin,
@@ -54,21 +53,19 @@ export default async function handler(req, res) {
     const events = calendarRes.data.items || [];
     console.log(`📅 Fetched ${events.length} events from Google Calendar`);
 
-    // Process each event: create booking if not exists, or log that it exists
+    // Process each event and upsert into the database
     for (const event of events) {
-      // Build the data to upsert (this should match your booking schema)
       const bookingData = await createBookingFromCalendarEvent(event);
 
-      // Use updateOne with upsert: true to avoid duplicates
       await Booking.updateOne(
-        { calendarEventId: event.id }, // filter by event id
-        { $set: bookingData }, // update with new data
-        { upsert: true } // insert if not found
+        { calendarEventId: event.id },
+        { $set: bookingData },
+        { upsert: true }
       );
       console.log(`Upserted booking for event ${event.id}`);
     }
 
-    // Identify and delete bookings whose calendar events have been deleted
+    // Delete bookings whose corresponding calendar events no longer exist
     const currentEventIds = events.map((event) => event.id);
     const removedResult = await Booking.deleteMany({
       calendarEventId: { $exists: true, $nin: currentEventIds },

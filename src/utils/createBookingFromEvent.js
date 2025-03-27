@@ -1,44 +1,33 @@
-// utils/createBookingFromEvent.js
 import Booking from "@/models/Booking";
-import { format } from "date-fns";
+import { formatInTimeZone, utcToZonedTime } from "date-fns-tz";
 
-/**
- * Convert a Date object to a 12-hour formatted time string, e.g. "6:00 AM".
- */
-function convertTimeTo12Hour(date) {
-  return format(date, "h:mm a");
+// Convert a Date object to a 12-hour format string in the specified time zone
+function convertTimeTo12Hour(date, timeZone = "America/New_York") {
+  return formatInTimeZone(date, timeZone, "h:mm a");
 }
 
-/**
- * Extract details from the event description.
- * Expects lines like:
- * "Customer Name: Sarah"
- * "Customer Email: woman@awomlab.com"
- * "Customer Phone: 3057981664"
- */
+// Parse customer details from the event description
 function parseEventDetails(description = "") {
   let customerName = "";
   let customerEmail = "";
   let customerPhone = "";
   const lines = description.split("\n");
   lines.forEach((line) => {
-    if (line.toLowerCase().includes("customer name:")) {
+    const lower = line.toLowerCase();
+    if (lower.includes("customer name:")) {
       customerName = line.split(":")[1]?.trim() || "";
     }
-    if (line.toLowerCase().includes("customer email:")) {
+    if (lower.includes("customer email:")) {
       customerEmail = line.split(":")[1]?.trim() || "";
     }
-    if (line.toLowerCase().includes("customer phone:")) {
+    if (lower.includes("customer phone:")) {
       customerPhone = line.split(":")[1]?.trim() || "";
     }
   });
   return { customerName, customerEmail, customerPhone };
 }
 
-/**
- * Parse the studio name from the event summary.
- * Expects the summary to start with "Booking for "
- */
+// Extract studio name from the event summary
 function parseStudio(summary = "") {
   const prefix = "Booking for ";
   if (summary.startsWith(prefix)) {
@@ -47,55 +36,45 @@ function parseStudio(summary = "") {
   return summary;
 }
 
-/**
- * Create a Booking record in the database based on the event details.
- */
+// Build the booking data from a Google Calendar event
 export async function createBookingFromCalendarEvent(event) {
-  // Parse start and end times from the event.
-  const startDateTime = event.start.dateTime
-    ? new Date(event.start.dateTime)
-    : new Date(event.start.date);
-  const endDateTime = event.end.dateTime
-    ? new Date(event.end.dateTime)
-    : new Date(event.end.date);
+  console.log(event, "creating event from calendar");
 
-  // Format date and time values.
-  const startDate = startDateTime;
-  const startTime = convertTimeTo12Hour(startDateTime);
-  const endTime = convertTimeTo12Hour(endDateTime);
+  const timeZone = "America/New_York";
 
-  // Extract studio from summary and customer details from description.
+  // Parse the event start/end times from Google Calendar (in UTC)
+  const startUtc = new Date(event.start.dateTime || event.start.date);
+  const endUtc = new Date(event.end.dateTime || event.end.date);
+
+  // Convert to Eastern for storage or display as needed
+  const startDate = utcToZonedTime(startUtc, timeZone);
+  const startTime = convertTimeTo12Hour(startUtc, timeZone);
+  const endTime = convertTimeTo12Hour(endUtc, timeZone);
+
   const studio = parseStudio(event.summary);
   const { customerName, customerEmail, customerPhone } = parseEventDetails(
     event.description
   );
 
-  // Set default values for items and cost if not provided manually.
-  const items = [];
-  const subtotal = 0;
-  const studioCost = 0;
-  const estimatedTotal = 0;
-  const paymentStatus = "manual";
-
+  // Build a plain object with the booking data
   const bookingData = {
     studio,
-    startDate,
-    startTime,
+    startDate, // stored as Date (Eastern time version)
+    startTime, // formatted as a string in 12-hour format
     endTime,
-    items,
-    subtotal,
-    studioCost,
-    estimatedTotal,
-    paymentStatus,
+    items: [],
+    subtotal: 0,
+    studioCost: 0,
+    estimatedTotal: 0,
+    paymentStatus: "manual",
     customerName,
     customerEmail,
     customerPhone,
-    calendarEventId: event.id, // Save the event's unique ID for reference
+    calendarEventId: event.id,
     createdAt: new Date(),
   };
 
-  // Create and save the booking document.
-  const booking = new Booking(bookingData);
-  await booking.save();
-  return booking;
+  // Instead of saving here directly, we return the plain data object so that
+  // it can be used in an upsert operation.
+  return bookingData;
 }
