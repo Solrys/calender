@@ -11,20 +11,20 @@ if (
   serviceAccountKey = serviceAccountKey.slice(1, -1);
 }
 const serviceAccount = JSON.parse(serviceAccountKey);
+const auth = new google.auth.GoogleAuth({
+  credentials: serviceAccount, // Your service account key file
+  scopes: SCOPES,
+});
+
+const authClient = await auth.getClient();
+
+// Optionally, set the global authentication
+google.options({ auth: authClient });
+
+// Use the Calendar API
+const calendar = google.calendar("v3");
 async function createCalendarEvent(eventData) {
   // const keyFilePath = path.resolve(process.cwd(), "service-account.json");
-  const auth = new google.auth.GoogleAuth({
-    credentials: serviceAccount, // Your service account key file
-    scopes: SCOPES,
-  });
-
-  const authClient = await auth.getClient();
-
-  // Optionally, set the global authentication
-  google.options({ auth: authClient });
-
-  // Use the Calendar API
-  const calendar = google.calendar("v3");
 
   const response = await calendar.events.insert({
     calendarId:
