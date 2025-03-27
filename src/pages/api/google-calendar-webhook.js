@@ -41,7 +41,7 @@ export default async function handler(req, res) {
       now.getTime() + 30 * 24 * 60 * 60 * 1000
     ).toISOString();
 
-    // Fetch events from the calendar within the desired time window
+    // Fetch events from the calendar within the defined time window
     const calendarRes = await calendar.events.list({
       calendarId,
       timeMin,
@@ -53,7 +53,7 @@ export default async function handler(req, res) {
     const events = calendarRes.data.items || [];
     console.log(`📅 Fetched ${events.length} events from Google Calendar`);
 
-    // Process each event and upsert into the database
+    // Process each event: upsert the booking data to avoid duplicates
     for (const event of events) {
       const bookingData = await createBookingFromCalendarEvent(event);
 
@@ -65,7 +65,7 @@ export default async function handler(req, res) {
       console.log(`Upserted booking for event ${event.id}`);
     }
 
-    // Delete bookings whose corresponding calendar events no longer exist
+    // Remove any bookings that are no longer present in the calendar
     const currentEventIds = events.map((event) => event.id);
     const removedResult = await Booking.deleteMany({
       calendarEventId: { $exists: true, $nin: currentEventIds },

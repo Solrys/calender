@@ -1,26 +1,25 @@
 import Booking from "@/models/Booking";
 import { formatInTimeZone, utcToZonedTime } from "date-fns-tz";
 
-// Convert a Date object to a 12-hour format string in the specified time zone
+// Convert a Date object to 12-hour format string in the specified time zone
 function convertTimeTo12Hour(date, timeZone = "America/New_York") {
   return formatInTimeZone(date, timeZone, "h:mm a");
 }
 
-// Parse customer details from the event description
+// Parse details from the event description
 function parseEventDetails(description = "") {
   let customerName = "";
   let customerEmail = "";
   let customerPhone = "";
   const lines = description.split("\n");
   lines.forEach((line) => {
-    const lower = line.toLowerCase();
-    if (lower.includes("customer name:")) {
+    if (line.toLowerCase().includes("customer name:")) {
       customerName = line.split(":")[1]?.trim() || "";
     }
-    if (lower.includes("customer email:")) {
+    if (line.toLowerCase().includes("customer email:")) {
       customerEmail = line.split(":")[1]?.trim() || "";
     }
-    if (lower.includes("customer phone:")) {
+    if (line.toLowerCase().includes("customer phone:")) {
       customerPhone = line.split(":")[1]?.trim() || "";
     }
   });
@@ -36,17 +35,16 @@ function parseStudio(summary = "") {
   return summary;
 }
 
-// Build the booking data from a Google Calendar event
+// Create booking data from a calendar event (without saving)
 export async function createBookingFromCalendarEvent(event) {
   console.log(event, "creating event from calendar");
 
   const timeZone = "America/New_York";
 
-  // Parse the event start/end times from Google Calendar (in UTC)
   const startUtc = new Date(event.start.dateTime || event.start.date);
   const endUtc = new Date(event.end.dateTime || event.end.date);
 
-  // Convert to Eastern for storage or display as needed
+  // Convert times to Eastern time zone
   const startDate = utcToZonedTime(startUtc, timeZone);
   const startTime = convertTimeTo12Hour(startUtc, timeZone);
   const endTime = convertTimeTo12Hour(endUtc, timeZone);
@@ -56,11 +54,11 @@ export async function createBookingFromCalendarEvent(event) {
     event.description
   );
 
-  // Build a plain object with the booking data
+  // Build the booking data object
   const bookingData = {
     studio,
-    startDate, // stored as Date (Eastern time version)
-    startTime, // formatted as a string in 12-hour format
+    startDate,
+    startTime,
     endTime,
     items: [],
     subtotal: 0,
@@ -74,7 +72,6 @@ export async function createBookingFromCalendarEvent(event) {
     createdAt: new Date(),
   };
 
-  // Instead of saving here directly, we return the plain data object so that
-  // it can be used in an upsert operation.
+  // Instead of saving here, return the booking data.
   return bookingData;
 }
