@@ -65,7 +65,7 @@ export default async function handler(req, res) {
       console.log(`Upserted booking for event ${event.id}`);
     }
 
-    // Remove any bookings that are no longer present in the calendar
+    // Delete any bookings whose calendar events no longer exist
     const currentEventIds = events.map((event) => event.id);
     const removedResult = await Booking.deleteMany({
       calendarEventId: { $exists: true, $nin: currentEventIds },
