@@ -62,7 +62,7 @@ export default function AddOnsPage() {
                   >
                     −
                   </button>
-                  <span className="px-4 text-lg font-semibold text-sm">
+                  <span className="px-4 font-semibold text-sm">
                     {item.quantity}
                   </span>
                   <button

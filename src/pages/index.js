@@ -3,7 +3,6 @@ import { format, startOfDay, addDays, isToday } from "date-fns";
 import { MdLocationOn } from "react-icons/md";
 // shadcn/ui components
 import { Calendar } from "@/components/ui/calendar";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectTrigger,
