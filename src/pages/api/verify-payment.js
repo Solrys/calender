@@ -88,14 +88,18 @@ export default async function handler(req, res) {
       formattedDate + "T" + convertTo24Hour(endTime) + "-04:00"
     ).toISOString();
 
+    // Build the event data in the same format as manual events:
+    // - Title: "Booking for [Studio]"
+    // - Description includes all details, each on a new line.
     const eventData = {
       summary: `Booking for ${studio}`,
-      location: "Your studio location",
-      description: `Booking details:
+      location: "Your studio location", // Optionally adjust dynamically
+      description: `Customer Name: ${customerName}
+Customer Email: ${customerEmail}
+Customer Phone: ${customerPhone}
 Date: ${formattedDate}
-Start: ${startTime}
-End: ${endTime}
-Customer: ${customerName} (${customerEmail})`,
+Start Time: ${startTime}
+End Time: ${endTime}`,
       start: {
         dateTime: startISO,
         timeZone: "America/New_York",
@@ -104,7 +108,6 @@ Customer: ${customerName} (${customerEmail})`,
         dateTime: endISO,
         timeZone: "America/New_York",
       },
-      phone: customerPhone,
     };
     try {
       const calendarEvent = await createCalendarEvent(eventData);
