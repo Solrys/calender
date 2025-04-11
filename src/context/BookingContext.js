@@ -20,7 +20,7 @@ export const studiosList = [
   { name: "THE GROUND", pricePerHour: 200 },
   { name: "THE EXTENSION", pricePerHour: 150 },
   { name: "THE LAB", pricePerHour: 150 },
-  { name: "BOTH THE LAB & THE EXTENSION FOR EVENTS", pricePerHour: 300 },
+  { name: "BOTH THE LAB & THE EXTENSION", pricePerHour: 300 },
   { name: "THE PODCAST ROOM", pricePerHour: 100 },
 ];
 
