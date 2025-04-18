@@ -17,7 +17,7 @@ function getNearestValidTime() {
 
 // Define the available studios along with their pricing per hour.
 export const studiosList = [
-  { name: "THE GROUND", pricePerHour: 200 },
+  { name: "THE GROUND", pricePerHour: 225 },
   { name: "THE EXTENSION", pricePerHour: 150 },
   { name: "THE LAB", pricePerHour: 150 },
   { name: "BOTH THE LAB & THE EXTENSION", pricePerHour: 300 },
