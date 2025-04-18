@@ -28,7 +28,7 @@ async function createCalendarEvent(eventData) {
 
   const response = await calendar.events.insert({
     calendarId:
-      "c_b8b92cc3940cbfcfb4cfcf31fbf2530b8f28c4626932af48d0c2c6f7f92d8b2f@group.calendar.google.com", // Replace with your calendar ID if different
+      "c_067c43f15ee97874539cf2de23bfbd49f37462f9e99243a21da9fcaeb91345bc@group.calendar.google.com", // Replace with your calendar ID if different
     requestBody: eventData,
   });
 
@@ -36,10 +36,11 @@ async function createCalendarEvent(eventData) {
 }
 
 export default createCalendarEvent;
+
 export async function deleteCalendarEvent(eventId) {
   try {
     await calendar.events.delete({
-      calendarId: process.env.GOOGLE_CALENDAR_ID, // your calendar id
+      calendarId: process.env.GOOGLE_CALENDAR_ID_WEBSITE, // your calendar id
       eventId,
     });
     console.log("Google Calendar event deleted:", eventId);
