@@ -1,4 +1,4 @@
-import { formatInTimeZone, zonedTimeToUtc } from "date-fns-tz";
+import { formatInTimeZone } from "date-fns-tz";
 
 // …parseEventDetails, parseStudio, convertTimeTo12Hour as before…
 
@@ -11,12 +11,15 @@ export async function createBookingFromCalendarEvent(event) {
   // 1) Get the local date string in ET
   const localDateString = formatInTimeZone(startUtc, timeZone, "yyyy-MM-dd");
 
-  // 2) Turn that “2025-03-26” at midnight ET into the correct UTC Date
-  const startDate = zonedTimeToUtc(`${localDateString}T00:00:00`, timeZone);
+  // 2) Manual ET-midnight → UTC conversion
+  const [year, month, day] = localDateString.split("-").map(Number);
+  const startDate = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
 
+  // 3) Format times for display
   const startTime = convertTimeTo12Hour(startUtc, timeZone);
   const endTime = convertTimeTo12Hour(endUtc, timeZone);
 
+  // 4) Parse studio & customer details
   const studio = parseStudio(event.summary);
   const { customerName, customerEmail, customerPhone } = parseEventDetails(
     event.description
