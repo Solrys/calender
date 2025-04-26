@@ -1,7 +1,10 @@
 import { formatInTimeZone } from "date-fns-tz";
 
 // …parseEventDetails, parseStudio, convertTimeTo12Hour as before…
-
+// Helper: Convert a UTC Date to “h:mm a” in the given time zone
+function convertTimeTo12Hour(date, timeZone = "America/New_York") {
+  return formatInTimeZone(date, timeZone, "h:mm a");
+}
 export async function createBookingFromCalendarEvent(event) {
   const timeZone = "America/New_York";
 
