@@ -36,6 +36,7 @@ export function BookingProvider({ children }) {
   const [startDate, setStartDate] = useState(today);
   const [startTime, setStartTime] = useState(getNearestValidTime());
   const [endTime, setEndTime] = useState("10:00 AM");
+  const [event, setEvent] = useState(false);
   // Placeholder image URL
 
   // Example "cart items" or add‑on items with images.
@@ -122,7 +123,7 @@ export function BookingProvider({ children }) {
         "A carefully curated visual guide designed to capture your project’s essence. Our moodboard ensures a cohesive aesthetic, providing a clear roadmap for your team to achieve a flawlessly executed production or event.",
     },
   ]);
-
+  const cleaningFee = event ? 180 : 0;
   // Provide a function to update item quantity.
   const updateItemQuantity = (itemId, delta) => {
     console.log(itemId, delta);
@@ -150,6 +151,9 @@ export function BookingProvider({ children }) {
         setEndTime,
         items,
         updateItemQuantity,
+        event,
+        setEvent,
+        cleaningFee,
       }}
     >
       {children}

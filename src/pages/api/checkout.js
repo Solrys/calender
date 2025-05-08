@@ -24,35 +24,29 @@ export default async function handler(req, res) {
       items: clientItems,
       subtotal: clientSubtotal,
       studioCost,
+      cleaningFee,
       estimatedTotal: clientTotal,
-      // New customer fields
       customerName,
       customerEmail,
       customerPhone,
-      timestamp, // local timestamp sent from frontend
+      timestamp,
     } = req.body;
-
-    console.log(endDate, endTime, startTime, "studio name");
 
     // 1️⃣ Validate Product Catalog
     const productDoc = await Product.findOne().lean();
     if (!productDoc) {
-      console.error("❌ Product catalog not found.");
       return res.status(400).json({ message: "Product catalog not found" });
     }
-    console.log("✅ Product catalog found.");
 
     // 2️⃣ Validate Studio Selection
     const validStudio = productDoc.studios.find(
       (s) => s.name.toLowerCase() === clientStudio.toLowerCase()
     );
     if (!validStudio) {
-      console.error(`❌ Invalid studio: "${clientStudio}" is not in catalog.`);
       return res.status(400).json({
         message: `Invalid studio: "${clientStudio}" is not available.`,
       });
     }
-    console.log("✅ Studio validation passed.");
 
     // 3️⃣ Validate Add-ons
     const priceMap = {};
@@ -64,9 +58,6 @@ export default async function handler(req, res) {
     for (const clientItem of clientItems) {
       const canonicalPrice = priceMap[String(clientItem.id)];
       if (canonicalPrice === undefined) {
-        console.error(
-          `❌ Invalid product: ${clientItem.name} (ID: ${clientItem.id})`
-        );
         return res.status(400).json({
           message: `Invalid product: ${clientItem.name} (ID: ${clientItem.id}) not found.`,
         });
@@ -75,25 +66,21 @@ export default async function handler(req, res) {
     }
 
     if (Number(clientSubtotal) !== recalculatedSubtotal) {
-      console.error(
-        `❌ Subtotal mismatch: Expected ${recalculatedSubtotal}, got ${clientSubtotal}`
-      );
       return res.status(400).json({ message: "Subtotal mismatch" });
     }
-    console.log("✅ Subtotal validation passed.");
 
-    // 4️⃣ Validate Total Calculation
-    const recalculatedTotal = recalculatedSubtotal + studioCost;
+    // 4️⃣ Validate Cleaning Fee
+    if (![0, 180].includes(cleaningFee)) {
+      return res.status(400).json({ message: "Invalid cleaning fee amount." });
+    }
+
+    // 5️⃣ Validate Total
+    const recalculatedTotal = recalculatedSubtotal + studioCost + cleaningFee;
     if (Number(clientTotal) !== recalculatedTotal) {
-      console.error(
-        `❌ Total mismatch: Expected ${recalculatedTotal}, got ${clientTotal}`
-      );
       return res.status(400).json({ message: "Total mismatch" });
     }
-    console.log("✅ Total calculation passed.");
 
-    // 5️⃣ Create Booking in MongoDB with paymentStatus "pending"
-    // (This document will be updated later after payment succeeds.)
+    // 6️⃣ Save Booking to DB
     const booking = new Booking({
       studio: clientStudio,
       startDate,
@@ -103,6 +90,7 @@ export default async function handler(req, res) {
       items: clientItems,
       subtotal: recalculatedSubtotal,
       studioCost,
+      cleaningFee,
       estimatedTotal: recalculatedTotal,
       paymentStatus: "pending",
       customerName,
@@ -112,23 +100,22 @@ export default async function handler(req, res) {
     });
 
     await booking.save();
-    console.log("✅ Booking saved in database with ID:", booking._id);
 
-    // 6️⃣ Create a Stripe Customer to prefill email, phone, and name
+    // 7️⃣ Create Stripe Customer
     const stripeCustomer = await stripe.customers.create({
       email: customerEmail,
       phone: customerPhone,
       name: customerName,
     });
 
-    // 7️⃣ Build valid line items for the Stripe Checkout Session
+    // 8️⃣ Build Stripe Line Items
     const validLineItems = clientItems
       .filter((item) => item.quantity > 0)
       .map((item) => ({
         price_data: {
           currency: "usd",
           product_data: { name: item.name },
-          unit_amount: Math.round(item.price * 100), // Convert to cents
+          unit_amount: Math.round(item.price * 100),
         },
         quantity: item.quantity,
       }));
@@ -144,32 +131,34 @@ export default async function handler(req, res) {
       });
     }
 
-    console.log("📦 Stripe Line Items:", validLineItems);
+    if (cleaningFee > 0) {
+      validLineItems.push({
+        price_data: {
+          currency: "usd",
+          product_data: { name: "Cleaning Fee" },
+          unit_amount: Math.round(cleaningFee * 100),
+        },
+        quantity: 1,
+      });
+    }
 
     if (validLineItems.length === 0) {
-      console.error("❌ Error: No valid items in checkout session.");
       return res.status(400).json({ message: "No valid items to checkout" });
     }
 
-    // 8️⃣ Create Stripe Checkout Session and pass bookingId in metadata
+    // 9️⃣ Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
-      phone_number_collection: {
-        enabled: true,
-      },
-
+      phone_number_collection: { enabled: true },
       mode: "payment",
       success_url: `${req.headers.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${req.headers.origin}/cancel`,
-      // customer: stripeCustomer.id,
       customer_email: customerEmail,
       line_items: validLineItems,
       metadata: {
-        bookingId: booking._id.toString(), // Pass the MongoDB booking ID
+        bookingId: booking._id.toString(),
       },
     });
-
-    console.log("✅ Stripe Checkout Session Created:", session.id);
 
     res.status(200).json({ sessionId: session.id });
   } catch (error) {

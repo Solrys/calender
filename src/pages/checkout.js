@@ -38,6 +38,8 @@ export default function CheckoutPage() {
     items,
     updateItemQuantity,
     selectedStudio,
+    cleaningFee,
+    event,
   } = useContext(BookingContext);
 
   // Calculate totals
@@ -54,7 +56,7 @@ export default function CheckoutPage() {
       ? studioHours * selectedStudio.pricePerHour
       : 0;
 
-  const estimatedTotal = subtotal + studioCost;
+  const estimatedTotal = subtotal + studioCost + cleaningFee;
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -142,6 +144,7 @@ export default function CheckoutPage() {
           customerName,
           customerEmail,
           customerPhone,
+          cleaningFee,
           timestamp: localTimestamp,
         }),
       });
@@ -230,6 +233,16 @@ export default function CheckoutPage() {
               })()}
             </div>
           </div>
+          {event && (
+            <div className="flex flex-col gap-1">
+              <p className="text-gray-600 text-sm font-semibold">
+                Cleaning Fee
+              </p>
+              <div className="p-3 text-[16px] bg-gray-100">
+                ${cleaningFee}.00
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -304,6 +317,10 @@ export default function CheckoutPage() {
           <div className="flex justify-between">
             <p>Studio Price</p>
             <p>${studioCost.toFixed(2)}</p>
+          </div>
+          <div className="flex justify-between">
+            <p>Cleaning Fee</p>
+            <p>${cleaningFee.toFixed(2)}</p>
           </div>
 
           <div className="flex justify-between font-bold text-xl mt-2">

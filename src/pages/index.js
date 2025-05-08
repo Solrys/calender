@@ -10,10 +10,18 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import styles from "@/styles/Home.module.css";
 import { BookingContext } from "@/context/BookingContext";
 import { useRouter } from "next/router";
-
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Info } from "lucide-react"; // You’re already using this
 // Import helper for blocked times and time conversions
 import {
   computeBlockedTimesByDate,
@@ -35,6 +43,8 @@ export default function BookingPage() {
     setStartTime,
     setEndTime,
     endTime,
+    event,
+    setEvent,
   } = useContext(BookingContext);
   const today = startOfDay(new Date());
   const router = useRouter();
@@ -180,7 +190,7 @@ export default function BookingPage() {
         <div className={styles.leftSide}>
           <div>
             <div className={styles.wrap}>
-              <div className="w-[100%] sm:w-[92%]">
+              <div className="w-[100%] sm:w-[100%]">
                 <label className="w-40 text-[18px] font-bold mb-1">
                   Select Studio
                 </label>
@@ -217,6 +227,42 @@ export default function BookingPage() {
                     * Studio is required
                   </p>
                 )}
+              </div>
+
+              {/* <!---add toggle here--> */}
+              <div className="flex gap-2 flex-col">
+                <span className=" text-sm font-medium text-gray-700 mr-3 mt-1">
+                  Is this an event?
+                </span>
+                <div className="flex gap-5">
+                  <label className="inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={event}
+                      onChange={(e) => setEvent(e.target.checked)}
+                    />
+                    <div
+                      className="relative w-11 h-6 bg-gray-200 rounded-full peer-checked:after:translate-x-full peer-checked:after:border-white
+          after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border 
+          after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"
+                    ></div>
+                  </label>
+
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="w-4 h-4 text-muted-foreground cursor-pointer mt-[4px]" />
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="right"
+                        className="bg-black text-white text-xs px-3 py-2 rounded w-64"
+                      >
+                        Mandatory $180.00 cleaning fee for events
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
               </div>
             </div>
             {/* Calendar Section */}
