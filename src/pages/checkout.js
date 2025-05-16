@@ -415,7 +415,7 @@ export default function CheckoutPage() {
                 that results from you or your team’s negligence.
                 <br />
                 • A cleaning fee of $180.00 will be charged if the rented space
-                isn't left as found.
+                isn&apos;t left as found.
                 <br />• A fee of $350.00 will be charged for any damages to the
                 furniture (dirt or spills).
               </p>

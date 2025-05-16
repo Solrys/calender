@@ -37,7 +37,7 @@ export default function BookingDashboard() {
         console.log("✅ Fetched bookings:", data);
         if (data && Array.isArray(data.bookings)) {
           const sortedBookings = data.bookings.sort(
-            (a, b) => new Date(b.startDate) - new Date(a.startDate)
+            (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
           );
           setBookings(sortedBookings);
           setFilteredBookings(sortedBookings);
@@ -74,6 +74,8 @@ export default function BookingDashboard() {
       filtered.sort((a, b) => a.studio.localeCompare(b.studio));
     } else if (sortOption === "studio-desc") {
       filtered.sort((a, b) => b.studio.localeCompare(a.studio));
+    } else {
+      filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     }
 
     console.log("📌 Filtered Bookings:", filtered);

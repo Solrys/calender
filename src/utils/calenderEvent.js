@@ -24,15 +24,33 @@ google.options({ auth: authClient });
 // Use the Calendar API
 const calendar = google.calendar("v3");
 async function createCalendarEvent(eventData) {
-  // const keyFilePath = path.resolve(process.cwd(), "service-account.json");
+  try {
+    const calendarId =
+      "c_067c43f15ee97874539cf2de23bfbd49f37462f9e99243a21da9fcaeb91345bc@group.calendar.google.com"; // Replace if dynamic
 
-  const response = await calendar.events.insert({
-    calendarId:
-      "c_067c43f15ee97874539cf2de23bfbd49f37462f9e99243a21da9fcaeb91345bc@group.calendar.google.com", // Replace with your calendar ID if different
-    requestBody: eventData,
-  });
+    const response = await calendar.events.insert({
+      calendarId,
+      requestBody: eventData,
+    });
 
-  return response.data;
+    console.log("✅ Calendar event created:", response.data.id);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Failed to create calendar event");
+
+    // Print full error details for debugging
+    if (error.errors || error.response?.data) {
+      console.error(
+        "🧩 Google API Error:",
+        JSON.stringify(error.response?.data || error.errors, null, 2)
+      );
+    }
+
+    // Optional: Customize error message
+    throw new Error(
+      error.message || "Unknown error occurred while creating calendar event"
+    );
+  }
 }
 
 export default createCalendarEvent;
