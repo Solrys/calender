@@ -36,7 +36,7 @@ export function BookingProvider({ children }) {
   const [startDate, setStartDate] = useState(today);
   const [startTime, setStartTime] = useState(getNearestValidTime());
   const [endTime, setEndTime] = useState("10:00 AM");
-  const [event, setEvent] = useState(false);
+  const [event, setEvent] = useState(null);
   // Placeholder image URL
 
   // Example "cart items" or add‑on items with images.
@@ -66,7 +66,7 @@ export function BookingProvider({ children }) {
       quantity: 0,
       image: "/service/hair.webp",
       description:
-        "Our expert in-house hairstylists specialize in crafting stunning looks tailored to your needs. Whether for a photoshoot, video content, or a major event, they’ll ensure your hair is styled to perfection.",
+        "Our expert in-house hairstylists specialize in crafting stunning looks tailored to your needs. Whether for a photoshoot, video content, or a major event, they'll ensure your hair is styled to perfection.",
     },
     {
       id: 1,
@@ -75,7 +75,7 @@ export function BookingProvider({ children }) {
       quantity: 0,
       image: "/service/makeup.avif",
       description:
-        "Our highly skilled in-house makeup artists are ready to bring your vision to life, whether it’s for a shoot, video, or a special event. From natural glam to bold editorial looks, they’ve got you covered.",
+        "Our highly skilled in-house makeup artists are ready to bring your vision to life, whether it's for a shoot, video, or a special event. From natural glam to bold editorial looks, they've got you covered.",
     },
     {
       id: 10,
@@ -84,7 +84,7 @@ export function BookingProvider({ children }) {
       quantity: 0,
       image: "/service/models.avif",
       description:
-        "Gain access to top-tier models through our agency partners. Choose models whose look and energy align with your production’s creative direction, ensuring the perfect fit for your shoot or event.",
+        "Gain access to top-tier models through our agency partners. Choose models whose look and energy align with your production's creative direction, ensuring the perfect fit for your shoot or event.",
     },
     {
       id: 11,
@@ -120,7 +120,7 @@ export function BookingProvider({ children }) {
       quantity: 0,
       image: "/service/moodboards.jpg",
       description:
-        "A carefully curated visual guide designed to capture your project’s essence. Our moodboard ensures a cohesive aesthetic, providing a clear roadmap for your team to achieve a flawlessly executed production or event.",
+        "A carefully curated visual guide designed to capture your project's essence. Our moodboard ensures a cohesive aesthetic, providing a clear roadmap for your team to achieve a flawlessly executed production or event.",
     },
   ]);
   const cleaningFee = event ? 180 : 0;

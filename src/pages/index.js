@@ -21,7 +21,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Info } from "lucide-react"; // You’re already using this
+import { Info } from "lucide-react"; // You're already using this
 // Import helper for blocked times and time conversions
 import {
   computeBlockedTimesByDate,
@@ -167,6 +167,10 @@ export default function BookingPage() {
     if (!endTime) {
       alert("Something went wrong with end time calculation.");
     }
+    if (event === null || event === undefined) {
+      alert("Please select whether this is an event or not.");
+      return;
+    }
 
     setErrors(newErrors);
 
@@ -231,38 +235,36 @@ export default function BookingPage() {
 
               {/* <!---add toggle here--> */}
               <div className="flex gap-2 flex-col">
-                <span className=" text-sm font-medium text-gray-700 mr-3 mt-1">
+                <span className="text-sm font-medium text-gray-700 mr-3 mt-1">
                   Is this an event?
                 </span>
-                <div className="flex gap-5">
+                <div className="flex gap-4">
                   <label className="inline-flex items-center cursor-pointer">
                     <input
-                      type="checkbox"
-                      className="sr-only peer"
-                      checked={event}
-                      onChange={(e) => setEvent(e.target.checked)}
+                      type="radio"
+                      name="event"
+                      value="yes"
+                      checked={event === true}
+                      onChange={() => setEvent(true)}
+                      className="mr-2"
                     />
-                    <div
-                      className="relative w-11 h-6 bg-gray-200 rounded-full peer-checked:after:translate-x-full peer-checked:after:border-white
-          after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border 
-          after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"
-                    ></div>
+                    <span className="text-sm">Yes</span>
                   </label>
-
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="w-4 h-4 text-muted-foreground cursor-pointer mt-[4px]" />
-                      </TooltipTrigger>
-                      <TooltipContent
-                        side="right"
-                        className="bg-black text-white text-xs px-3 py-2 rounded w-64"
-                      >
-                        Mandatory $180.00 cleaning fee for events
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <label className="inline-flex items-center cursor-pointer">
+                    <input
+                      type="radio"
+                      name="event"
+                      value="no"
+                      checked={event === false}
+                      onChange={() => setEvent(false)}
+                      className="mr-2"
+                    />
+                    <span className="text-sm">No</span>
+                  </label>
                 </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  *If yes, a $180 event cleaning fee will be charged
+                </p>
               </div>
             </div>
             {/* Calendar Section */}
