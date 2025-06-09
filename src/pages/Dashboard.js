@@ -131,11 +131,11 @@ export default function BookingDashboard() {
         console.error("Error calculating total hours", e);
       }
 
-      return `${format(new Date(b.createdAt), "yyyy-MM-dd HH:mm:ss")},${
+      return `${format(new Date(b.createdAt), "MMM d, yyyy HH:mm:ss")},${
         b.customerName
       },${b.customerPhone},${b.customerEmail},${b.studio},${
         b.paymentStatus
-      },${format(new Date(b.startDate), "yyyy-MM-dd")},${b.startTime},${
+      },${format(new Date(b.startDate), "MMM d, yyyy")},${b.startTime},${
         b.endTime
       },${b.subtotal},${b.estimatedTotal},${addOns},${totalHours}`;
     });
@@ -317,7 +317,7 @@ export default function BookingDashboard() {
                     <TableCell>
                       {format(
                         new Date(booking.createdAt),
-                        "yyyy-MM-dd HH:mm:ss"
+                        "MMM d, yyyy HH:mm:ss"
                       )}
                     </TableCell>
                     <TableCell>{booking.customerName}</TableCell>
@@ -326,7 +326,7 @@ export default function BookingDashboard() {
                     <TableCell>{booking.studio}</TableCell>
                     <TableCell>{booking.paymentStatus}</TableCell>
                     <TableCell>
-                      {format(new Date(booking.startDate), "yyyy-MM-dd")}
+                      {format(new Date(booking.startDate), "MMM d, yyyy")}
                     </TableCell>
                     <TableCell>{booking.startTime}</TableCell>
                     <TableCell>{booking.endTime}</TableCell>

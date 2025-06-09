@@ -25,8 +25,7 @@ google.options({ auth: authClient });
 const calendar = google.calendar("v3");
 async function createCalendarEvent(eventData) {
   try {
-    const calendarId =
-      "c_067c43f15ee97874539cf2de23bfbd49f37462f9e99243a21da9fcaeb91345bc@group.calendar.google.com"; // Replace if dynamic
+    const calendarId = process.env.GOOGLE_CALENDAR_ID_WEBSITE || process.env.GOOGLE_CALENDAR_ID;
 
     const response = await calendar.events.insert({
       calendarId,

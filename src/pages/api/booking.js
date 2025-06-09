@@ -49,6 +49,17 @@ export default async function handler(req, res) {
   } else if (req.method === "GET") {
     res.setHeader("Cache-Control", "no-store, max-age=0");
     try {
+      // CRITICAL FIX: Clean up abandoned pending bookings before fetching
+      const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+      const deletedBookings = await Booking.deleteMany({
+        paymentStatus: "pending",
+        createdAt: { $lt: thirtyMinutesAgo }
+      });
+      
+      if (deletedBookings.deletedCount > 0) {
+        console.log(`🧹 Cleaned up ${deletedBookings.deletedCount} abandoned pending bookings`);
+      }
+
       const bookings = await Booking.find({});
       res.status(200).json({ bookings });
     } catch (error) {

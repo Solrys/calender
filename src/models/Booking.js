@@ -9,11 +9,13 @@ const BookingSchema = new mongoose.Schema({
   items: { type: Array, default: [] },
   subtotal: { type: Number, default: 0 },
   studioCost: { type: Number, default: 0 },
+  cleaningFee: { type: Number, default: 0 },
   estimatedTotal: { type: Number, default: 0 },
   paymentStatus: { type: String, default: "manual" }, // "manual" for direct calendar events
   customerName: { type: String, default: "" },
   customerEmail: { type: String, default: "" },
   customerPhone: { type: String, default: "" },
+  event: { type: Boolean, default: false }, // Track if this is an event booking
   calendarEventId: { type: String, unique: true, sparse: true },
   createdAt: { type: Date, default: Date.now },
 });

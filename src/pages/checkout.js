@@ -101,7 +101,7 @@ export default function CheckoutPage() {
   // Accept T&C and open the form modal
   const handleAcceptTerms = () => {
     if (!hasAcceptedTerms) {
-      // Store acceptance in localStorage so user won’t see T&C again
+      // Store acceptance in localStorage so user won't see T&C again
       localStorage.setItem("acceptedTnC", "true");
       setHasAcceptedTerms(true);
     }
@@ -145,6 +145,7 @@ export default function CheckoutPage() {
           customerEmail,
           customerPhone,
           cleaningFee,
+          event,
           timestamp: localTimestamp,
         }),
       });
@@ -412,7 +413,7 @@ export default function CheckoutPage() {
                 <br />
                 • Cameras are on at all times. By renting our studio(s), you
                 agree to be recorded and held liable for any property damage
-                that results from you or your team’s negligence.
+                that results from you or your team's negligence.
                 <br />
                 • A cleaning fee of $180.00 will be charged if the rented space
                 isn&apos;t left as found.

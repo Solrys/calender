@@ -77,7 +77,7 @@ export default async function handler(req, res) {
 
     const selectedAddons = items
       .filter((item) => item.quantity > 0)
-      .map((item) => `- ${item.name}`)
+      .map((item) => `- ${item.name} (${item.quantity})`)
       .join("\n");
 
     const eventData = {
@@ -88,7 +88,7 @@ Customer Email: ${customerEmail}
 Customer Phone: ${customerPhone}
 Date: ${formattedDate}
 Start Time: ${startTime}
-End Time: ${endTime}${selectedAddons ? `\nAdd-ons:\n${selectedAddons}` : ""}
+End Time: ${endTime}${updatedBooking.event ? '\nEvent: Yes (Cleaning fee applied)' : '\nEvent: No'}${selectedAddons ? `\nAdd-ons:\n${selectedAddons}` : ""}
 Subtotal: $${subtotal}
 Studio Cost: $${studioCost}
 Estimated Total: $${estimatedTotal}`,

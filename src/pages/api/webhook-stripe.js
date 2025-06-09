@@ -1,6 +1,8 @@
 import Stripe from "stripe";
 import dbConnect from "@/lib/dbConnect";
 import Booking from "@/models/Booking";
+import { format } from "date-fns";
+import createCalendarEvent from "@/utils/calenderEvent";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -17,6 +19,16 @@ function buffer(readable) {
     readable.on("end", () => resolve(Buffer.concat(chunks)));
     readable.on("error", reject);
   });
+}
+
+function convertTo24Hour(timeStr) {
+  const [time, modifier] = timeStr.split(" ");
+  let [hours, minutes] = time.split(":").map(Number);
+  if (modifier.toUpperCase() === "PM" && hours !== 12) hours += 12;
+  if (modifier.toUpperCase() === "AM" && hours === 12) hours = 0;
+  return `${hours.toString().padStart(2, "0")}:${minutes
+    .toString()
+    .padStart(2, "0")}:00`;
 }
 
 export default async function handler(req, res) {
@@ -60,6 +72,76 @@ export default async function handler(req, res) {
         return res.status(404).json({ message: "Booking not found" });
       }
       console.log(`✅ Booking ${bookingId} marked as success via webhook.`);
+
+      // CRITICAL FIX: Create Google Calendar event after successful payment
+      const {
+        studio,
+        startDate,
+        startTime,
+        endTime,
+        customerName,
+        customerEmail,
+        customerPhone,
+        subtotal,
+        studioCost,
+        estimatedTotal,
+        items = [],
+        event: isEvent,
+      } = updatedBooking;
+
+      // Only create calendar event if it doesn't already exist
+      if (!updatedBooking.calendarEventId) {
+        try {
+          const formattedDate = format(new Date(startDate), "yyyy-MM-dd");
+          
+          // Use proper timezone handling instead of hardcoded offset
+          const timeZone = "America/New_York";
+          const startISO = new Date(
+            `${formattedDate}T${convertTo24Hour(startTime)}`
+          );
+          const endISO = new Date(
+            `${formattedDate}T${convertTo24Hour(endTime)}`
+          );
+
+          // Adjust for Eastern Time (handles EST/EDT automatically)
+          const options = { timeZone };
+          const startISOString = startISO.toLocaleString("sv-SE", options).replace(" ", "T") + ":00";
+          const endISOString = endISO.toLocaleString("sv-SE", options).replace(" ", "T") + ":00";
+
+          const selectedAddons = items
+            .filter((item) => item.quantity > 0)
+            .map((item) => `- ${item.name} (${item.quantity})`)
+            .join("\n");
+
+          const eventData = {
+            summary: `Booking for ${studio}`,
+            location: "Your studio location",
+            description: `Customer Name: ${customerName}
+Customer Email: ${customerEmail}
+Customer Phone: ${customerPhone}
+Date: ${formattedDate}
+Start Time: ${startTime}
+End Time: ${endTime}${isEvent ? '\nEvent: Yes (Cleaning fee applied)' : '\nEvent: No'}${selectedAddons ? `\nAdd-ons:\n${selectedAddons}` : ""}
+Subtotal: $${subtotal}
+Studio Cost: $${studioCost}
+Estimated Total: $${estimatedTotal}`,
+            start: { dateTime: new Date(`${formattedDate}T${convertTo24Hour(startTime)}`).toISOString(), timeZone },
+            end: { dateTime: new Date(`${formattedDate}T${convertTo24Hour(endTime)}`).toISOString(), timeZone },
+          };
+
+          const calendarEvent = await createCalendarEvent(eventData);
+          console.log("✅ Google Calendar event created via webhook:", calendarEvent.id);
+          
+          // Update booking with calendar event ID
+          await Booking.findByIdAndUpdate(bookingId, {
+            calendarEventId: calendarEvent.id,
+          });
+        } catch (calendarError) {
+          console.error("❌ Failed to create Google Calendar event via webhook:", calendarError.message);
+          // Don't fail the webhook if calendar creation fails
+        }
+      }
+
       res.status(200).json({ received: true });
     } catch (error) {
       console.error("❌ Error updating booking status via webhook:", error);

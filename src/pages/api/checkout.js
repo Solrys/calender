@@ -30,6 +30,7 @@ export default async function handler(req, res) {
       customerEmail,
       customerPhone,
       timestamp,
+      event,
     } = req.body;
 
     const productDoc = await Product.findOne().lean();
@@ -85,6 +86,7 @@ export default async function handler(req, res) {
         customerEmail,
         customerPhone,
         createdAt: timestamp || new Date(),
+        event,
       }).save();
     } catch (err) {
       console.error("❌ Booking save failed:", err);

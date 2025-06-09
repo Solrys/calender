@@ -100,6 +100,13 @@ export default function BookingPage() {
         const data = await res.json();
         // Compute blocked times with special handling for the fourth studio.
         const filteredBookings = (data.bookings || []).filter((booking) => {
+          // CRITICAL FIX: Only consider successful or manual bookings for time blocking
+          const validStatuses = ['success', 'manual'];
+          if (!validStatuses.includes(booking.paymentStatus)) {
+            console.log(`Excluding booking with status: ${booking.paymentStatus}`);
+            return false;
+          }
+
           if (
             selectedStudio.name === "BOTH THE LAB & THE EXTENSION FOR EVENTS"
           ) {
@@ -263,7 +270,7 @@ export default function BookingPage() {
                   </label>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  *If yes, a $180 event cleaning fee will be charged
+                  If yes a $180 mandatory cleaning fee is applied at checkout.
                 </p>
               </div>
             </div>
