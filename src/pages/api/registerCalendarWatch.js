@@ -23,9 +23,12 @@ export default async function handler(req, res) {
       auth,
     });
 
-    const calendarId = process.env.GOOGLE_CALENDAR_ID;
+    // FIXED: Only register webhook for Manual Booking Calendar
+    const calendarId = process.env.GOOGLE_CALENDAR_ID; // Manual Booking Calendar
     const channelId = uuidv4(); // generate a unique channel ID
     const webhookUrl = process.env.CALENDAR_WEBHOOK_URL; // e.g., https://yourdomain.com/api/google-calendar-webhook
+
+    console.log(`📅 Registering webhook for Manual Booking Calendar: ${calendarId}`);
 
     const channelConfig = {
       id: channelId,
@@ -38,14 +41,17 @@ export default async function handler(req, res) {
       requestBody: channelConfig,
     });
 
-    console.log("✅ Calendar watch registered successfully:", response.data);
-    res
-      .status(200)
-      .json({ message: "Watch channel registered", data: response.data });
+    console.log("✅ Manual booking calendar webhook registered successfully:", response.data);
+    res.status(200).json({
+      message: "Manual booking calendar webhook registered",
+      calendarId,
+      channelId,
+      data: response.data
+    });
   } catch (error) {
-    console.error("❌ Error registering calendar watch:", error);
+    console.error("❌ Error registering manual booking calendar webhook:", error);
     res.status(500).json({
-      message: "Error registering calendar watch",
+      message: "Error registering manual booking calendar webhook",
       error: error.message,
     });
   }

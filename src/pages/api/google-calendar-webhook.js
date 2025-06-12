@@ -34,14 +34,17 @@ export default async function handler(req, res) {
       auth,
     });
 
-    const calendarId = process.env.GOOGLE_CALENDAR_ID;
+    // FIXED: Only handle Manual Booking Calendar (where users manually create bookings)
+    const calendarId = process.env.GOOGLE_CALENDAR_ID; // Manual Booking Calendar
+    console.log(`📅 Processing webhook for Manual Booking Calendar: ${calendarId}`);
+
     const now = new Date();
     const timeMin = now.toISOString();
     const timeMax = new Date(
       now.getTime() + 30 * 24 * 60 * 60 * 1000
     ).toISOString();
 
-    // Fetch events from the calendar within the defined time window
+    // Fetch events from the manual booking calendar within the defined time window
     const calendarRes = await calendar.events.list({
       calendarId,
       timeMin,
@@ -51,37 +54,51 @@ export default async function handler(req, res) {
     });
 
     const events = calendarRes.data.items || [];
-    console.log(`📅 Fetched ${events.length} events from Google Calendar`);
+    console.log(`📅 Fetched ${events.length} events from Manual Booking Calendar`);
+
+    let bookingsCreated = 0;
+    let bookingsUpdated = 0;
 
     // Process each event: upsert the booking data to avoid duplicates
     for (const event of events) {
-      const bookingData = await createBookingFromCalendarEvent(event);
+      try {
+        const bookingData = await createBookingFromCalendarEvent(event);
 
-      await Booking.updateOne(
-        { calendarEventId: event.id },
-        { $set: bookingData },
-        { upsert: true }
-      );
-      console.log(`Upserted booking for event ${event.id}`);
+        const result = await Booking.updateOne(
+          { calendarEventId: event.id },
+          { $set: bookingData },
+          { upsert: true }
+        );
+
+        if (result.upsertedCount > 0) {
+          console.log(`✅ Created new booking for event: ${event.summary || 'No title'} (${event.id})`);
+          bookingsCreated++;
+        } else {
+          console.log(`✓ Updated existing booking for event: ${event.summary || 'No title'} (${event.id})`);
+          bookingsUpdated++;
+        }
+      } catch (eventError) {
+        console.error(`❌ Error processing event ${event.id}:`, eventError);
+      }
     }
 
-    // SAFETY FIX: Disabled dangerous mass deletion that was wiping database
-    // This was deleting ALL bookings whose calendar events weren't in 30-day window
-    // OLD DANGEROUS CODE (COMMENTED OUT):
-    // const currentEventIds = events.map((event) => event.id);
-    // const removedResult = await Booking.deleteMany({
-    //   calendarEventId: { $exists: true, $nin: currentEventIds },
-    // });
-    // console.log(`Deleted ${removedResult.deletedCount} bookings that no longer exist in the calendar.`);
-
+    // SAFETY: Mass deletion is still disabled for safety
     console.log("⚠️ Mass deletion disabled for safety - database bookings preserved");
-    console.log("Use calendar-sync.js script for safe syncing of all events");
 
-    res.status(200).json({ message: "Calendar events processed (mass deletion disabled)" });
+    const message = `Manual booking webhook: ${bookingsCreated} new, ${bookingsUpdated} updated from ${events.length} events`;
+    console.log(`✅ ${message}`);
+
+    res.status(200).json({
+      message,
+      eventsProcessed: events.length,
+      bookingsCreated,
+      bookingsUpdated,
+      calendarType: 'Manual Booking Calendar'
+    });
   } catch (error) {
-    console.error("❌ Error syncing calendar events:", error);
+    console.error("❌ Error in manual booking webhook:", error);
     res
       .status(500)
-      .json({ message: "Error syncing events", error: error.message });
+      .json({ message: "Error syncing manual booking events", error: error.message });
   }
 }
