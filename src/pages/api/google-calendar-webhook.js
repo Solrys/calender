@@ -21,7 +21,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    console.log("🔔 Received Google Calendar push notification:", req.headers);
+    console.log("🔔 Received Google Calendar push notification");
 
     // Authenticate using the service account
     const auth = new google.auth.GoogleAuth({
@@ -36,21 +36,27 @@ export default async function handler(req, res) {
 
     // FIXED: Only handle Manual Booking Calendar (where users manually create bookings)
     const calendarId = process.env.GOOGLE_CALENDAR_ID; // Manual Booking Calendar
-    console.log(`📅 Processing webhook for Manual Booking Calendar: ${calendarId}`);
+    console.log(`📅 Processing webhook for Manual Booking Calendar`);
 
+    // FIXED: Extended time range - fetch from 30 days ago to 1 year in future
+    // This ensures we catch all events that might be created/modified
     const now = new Date();
-    const timeMin = now.toISOString();
-    const timeMax = new Date(
-      now.getTime() + 30 * 24 * 60 * 60 * 1000
-    ).toISOString();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const oneYearFromNow = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
 
-    // Fetch events from the manual booking calendar within the defined time window
+    const timeMin = thirtyDaysAgo.toISOString();
+    const timeMax = oneYearFromNow.toISOString();
+
+    console.log(`📅 Fetching events from ${thirtyDaysAgo.toDateString()} to ${oneYearFromNow.toDateString()}`);
+
+    // Fetch events from the manual booking calendar within the extended time window
     const calendarRes = await calendar.events.list({
       calendarId,
       timeMin,
       timeMax,
       singleEvents: true,
       orderBy: "startTime",
+      maxResults: 500 // Increased limit to catch more events
     });
 
     const events = calendarRes.data.items || [];
@@ -58,10 +64,14 @@ export default async function handler(req, res) {
 
     let bookingsCreated = 0;
     let bookingsUpdated = 0;
+    let bookingsSkipped = 0;
 
     // Process each event: upsert the booking data to avoid duplicates
     for (const event of events) {
       try {
+        // Check if booking already exists
+        const existingBooking = await Booking.findOne({ calendarEventId: event.id });
+
         const bookingData = await createBookingFromCalendarEvent(event);
 
         const result = await Booking.updateOne(
@@ -71,11 +81,14 @@ export default async function handler(req, res) {
         );
 
         if (result.upsertedCount > 0) {
-          console.log(`✅ Created new booking for event: ${event.summary || 'No title'} (${event.id})`);
+          console.log(`✅ CREATED new booking: "${event.summary || 'No title'}" (${event.id})`);
           bookingsCreated++;
-        } else {
-          console.log(`✓ Updated existing booking for event: ${event.summary || 'No title'} (${event.id})`);
+        } else if (result.modifiedCount > 0) {
+          console.log(`📝 UPDATED existing booking: "${event.summary || 'No title'}" (${event.id})`);
           bookingsUpdated++;
+        } else {
+          console.log(`✓ SKIPPED (no changes): "${event.summary || 'No title'}" (${event.id})`);
+          bookingsSkipped++;
         }
       } catch (eventError) {
         console.error(`❌ Error processing event ${event.id}:`, eventError);
@@ -85,7 +98,7 @@ export default async function handler(req, res) {
     // SAFETY: Mass deletion is still disabled for safety
     console.log("⚠️ Mass deletion disabled for safety - database bookings preserved");
 
-    const message = `Manual booking webhook: ${bookingsCreated} new, ${bookingsUpdated} updated from ${events.length} events`;
+    const message = `Webhook processed: ${bookingsCreated} created, ${bookingsUpdated} updated, ${bookingsSkipped} skipped`;
     console.log(`✅ ${message}`);
 
     res.status(200).json({
@@ -93,7 +106,9 @@ export default async function handler(req, res) {
       eventsProcessed: events.length,
       bookingsCreated,
       bookingsUpdated,
-      calendarType: 'Manual Booking Calendar'
+      bookingsSkipped,
+      calendarType: 'Manual Booking Calendar',
+      timeRange: `${thirtyDaysAgo.toDateString()} to ${oneYearFromNow.toDateString()}`
     });
   } catch (error) {
     console.error("❌ Error in manual booking webhook:", error);
