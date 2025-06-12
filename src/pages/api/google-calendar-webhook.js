@@ -66,7 +66,10 @@ export default async function handler(req, res) {
     let bookingsUpdated = 0;
     let bookingsSkipped = 0;
 
-    // Process each event: upsert the booking data to avoid duplicates
+    // Get all current calendar event IDs to detect deletions
+    const currentEventIds = events.map(event => event.id);
+
+    // Process each event: only update if actually changed
     for (const event of events) {
       try {
         // Check if booking already exists
@@ -74,31 +77,56 @@ export default async function handler(req, res) {
 
         const bookingData = await createBookingFromCalendarEvent(event);
 
-        const result = await Booking.updateOne(
-          { calendarEventId: event.id },
-          { $set: bookingData },
-          { upsert: true }
-        );
-
-        if (result.upsertedCount > 0) {
+        if (!existingBooking) {
+          // CREATE: New booking
+          await Booking.create({
+            ...bookingData,
+            calendarEventId: event.id
+          });
           console.log(`✅ CREATED new booking: "${event.summary || 'No title'}" (${event.id})`);
           bookingsCreated++;
-        } else if (result.modifiedCount > 0) {
-          console.log(`📝 UPDATED existing booking: "${event.summary || 'No title'}" (${event.id})`);
-          bookingsUpdated++;
         } else {
-          console.log(`✓ SKIPPED (no changes): "${event.summary || 'No title'}" (${event.id})`);
-          bookingsSkipped++;
+          // CHECK: Only update if event was actually modified
+          const eventLastModified = new Date(event.updated);
+          const bookingLastModified = new Date(existingBooking.updatedAt || existingBooking.createdAt);
+
+          if (eventLastModified > bookingLastModified) {
+            // UPDATE: Event was modified after booking
+            await Booking.updateOne(
+              { calendarEventId: event.id },
+              { $set: bookingData }
+            );
+            console.log(`📝 UPDATED booking (event modified): "${event.summary || 'No title'}" (${event.id})`);
+            bookingsUpdated++;
+          } else {
+            // SKIP: No changes needed
+            console.log(`✓ SKIPPED (no changes): "${event.summary || 'No title'}" (${event.id})`);
+            bookingsSkipped++;
+          }
         }
       } catch (eventError) {
         console.error(`❌ Error processing event ${event.id}:`, eventError);
       }
     }
 
-    // SAFETY: Mass deletion is still disabled for safety
-    console.log("⚠️ Mass deletion disabled for safety - database bookings preserved");
+    // HANDLE DELETIONS: Remove bookings for deleted calendar events
+    let bookingsDeleted = 0;
+    const deletedBookings = await Booking.find({
+      calendarEventId: { $exists: true, $nin: currentEventIds },
+      paymentStatus: "manual" // Only delete manual bookings, not website bookings
+    });
 
-    const message = `Webhook processed: ${bookingsCreated} created, ${bookingsUpdated} updated, ${bookingsSkipped} skipped`;
+    if (deletedBookings.length > 0) {
+      console.log(`🗑️ Found ${deletedBookings.length} bookings for deleted calendar events`);
+
+      for (const booking of deletedBookings) {
+        await Booking.deleteOne({ _id: booking._id });
+        console.log(`🗑️ DELETED booking for removed event: "${booking.customerName || 'No name'}" (${booking.calendarEventId})`);
+        bookingsDeleted++;
+      }
+    }
+
+    const message = `Webhook: ${bookingsCreated} created, ${bookingsUpdated} updated, ${bookingsSkipped} skipped, ${bookingsDeleted} deleted`;
     console.log(`✅ ${message}`);
 
     res.status(200).json({
@@ -107,6 +135,7 @@ export default async function handler(req, res) {
       bookingsCreated,
       bookingsUpdated,
       bookingsSkipped,
+      bookingsDeleted,
       calendarType: 'Manual Booking Calendar',
       timeRange: `${thirtyDaysAgo.toDateString()} to ${oneYearFromNow.toDateString()}`
     });
