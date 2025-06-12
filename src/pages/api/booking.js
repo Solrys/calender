@@ -49,15 +49,16 @@ export default async function handler(req, res) {
   } else if (req.method === "GET") {
     res.setHeader("Cache-Control", "no-store, max-age=0");
     try {
-      // CRITICAL FIX: Clean up abandoned pending bookings before fetching
+      // SAFETY FIX: Only clean up abandoned website bookings, never calendar-synced ones
       const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
       const deletedBookings = await Booking.deleteMany({
         paymentStatus: "pending",
-        createdAt: { $lt: thirtyMinutesAgo }
+        createdAt: { $lt: thirtyMinutesAgo },
+        calendarEventId: { $exists: false } // CRITICAL: Only delete bookings WITHOUT calendar events
       });
-      
+
       if (deletedBookings.deletedCount > 0) {
-        console.log(`🧹 Cleaned up ${deletedBookings.deletedCount} abandoned pending bookings`);
+        console.log(`🧹 Cleaned up ${deletedBookings.deletedCount} abandoned website bookings (calendar bookings preserved)`);
       }
 
       const bookings = await Booking.find({});

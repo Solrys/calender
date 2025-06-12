@@ -65,16 +65,19 @@ export default async function handler(req, res) {
       console.log(`Upserted booking for event ${event.id}`);
     }
 
-    // Delete any bookings whose calendar events no longer exist
-    const currentEventIds = events.map((event) => event.id);
-    const removedResult = await Booking.deleteMany({
-      calendarEventId: { $exists: true, $nin: currentEventIds },
-    });
-    console.log(
-      `Deleted ${removedResult.deletedCount} bookings that no longer exist in the calendar.`
-    );
+    // SAFETY FIX: Disabled dangerous mass deletion that was wiping database
+    // This was deleting ALL bookings whose calendar events weren't in 30-day window
+    // OLD DANGEROUS CODE (COMMENTED OUT):
+    // const currentEventIds = events.map((event) => event.id);
+    // const removedResult = await Booking.deleteMany({
+    //   calendarEventId: { $exists: true, $nin: currentEventIds },
+    // });
+    // console.log(`Deleted ${removedResult.deletedCount} bookings that no longer exist in the calendar.`);
 
-    res.status(200).json({ message: "Calendar events processed" });
+    console.log("⚠️ Mass deletion disabled for safety - database bookings preserved");
+    console.log("Use calendar-sync.js script for safe syncing of all events");
+
+    res.status(200).json({ message: "Calendar events processed (mass deletion disabled)" });
   } catch (error) {
     console.error("❌ Error syncing calendar events:", error);
     res
