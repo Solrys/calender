@@ -3,7 +3,7 @@
 import Stripe from "stripe";
 import dbConnect from "@/lib/dbConnect";
 import Booking from "@/models/Booking";
-import { format, addDays } from "date-fns";
+import { format } from "date-fns";
 import createCalendarEvent from "@/utils/calenderEvent";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -67,11 +67,11 @@ export default async function handler(req, res) {
       items = [],
     } = updatedBooking;
 
-    // FIX: Apply +1 day correction to match Google Calendar exactly (same as our fresh import fix)
-    const correctedDate = addDays(new Date(startDate), 1);
-    const formattedDate = format(correctedDate, "yyyy-MM-dd");
+    // Use the user-selected date for Google Calendar
+    const calendarDate = new Date(startDate);
+    const formattedDate = format(calendarDate, "yyyy-MM-dd");
 
-    // Create DateTime strings with corrected date
+    // Create DateTime strings with user-selected date
     const startDateTime = `${formattedDate}T${convertTo24Hour(startTime)}`;
     const endDateTime = `${formattedDate}T${convertTo24Hour(endTime)}`;
 
@@ -106,14 +106,14 @@ Estimated Total: $${estimatedTotal}`,
       const calendarEvent = await createCalendarEvent(eventData);
       console.log("✅ Google Calendar event created:", calendarEvent.id);
 
-      // ALSO UPDATE: Apply +1 day correction to database booking to match calendar
+      // SYNC FIX: Update database booking to match the EXACT date we sent to Google Calendar
       await Booking.findByIdAndUpdate(bookingId, {
         calendarEventId: calendarEvent.id,
-        startDate: correctedDate,
-        syncVersion: 'v3.2-new-booking-corrected'
+        startDate: calendarDate, // Ensure database matches calendar exactly
+        syncVersion: 'v3.4-calendar-database-synced'
       });
 
-      console.log(`✅ Database booking date corrected: ${format(new Date(startDate), "yyyy-MM-dd")} → ${formattedDate}`);
+      console.log(`✅ Calendar and database synced for date: ${formattedDate}`);
     } catch (calendarError) {
       console.error(
         "❌ Failed to create Google Calendar event:",

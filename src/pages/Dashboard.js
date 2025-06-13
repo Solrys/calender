@@ -21,23 +21,57 @@ import { saveAs } from "file-saver";
 import AddonsDisplay from "@/components/Addon/AddonDisplay";
 
 // Timezone-neutral date formatting function
-const formatDateForDisplay = (dateString) => {
+const formatDateForDisplay = (dateString, syncVersion) => {
   // Extract date from ISO string to avoid timezone conversion
   const isoDate = new Date(dateString).toISOString();
   const datePart = isoDate.split('T')[0]; // Gets "2025-07-28"
   const [year, month, day] = datePart.split('-');
 
-  // Create a date in the local timezone with these exact values
-  const localDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-  return format(localDate, "MMM d, yyyy");
+  // Only add +1 day for bookings that haven't been corrected yet
+  const needsCorrection = !syncVersion || !syncVersion.includes('v3.1-date-corrected');
+
+  if (needsCorrection) {
+    // DASHBOARD FIX: Add +1 day to match Google Calendar display for uncorrected bookings
+    const correctedDate = new Date(`${year}-${month}-${day}T12:00:00.000Z`);
+    correctedDate.setUTCDate(correctedDate.getUTCDate() + 1);
+
+    // Convert to local date for formatting
+    const localDate = new Date(correctedDate.getUTCFullYear(), correctedDate.getUTCMonth(), correctedDate.getUTCDate());
+    return format(localDate, "MMM d, yyyy");
+  } else {
+    // For corrected bookings, use the date as-is
+    const localDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    return format(localDate, "MMM d, yyyy");
+  }
 };
 
 // Helper function for month/year filtering
-const getDatePartsForFilter = (dateString) => {
+const getDatePartsForFilter = (dateString, syncVersion) => {
   const isoDate = new Date(dateString).toISOString();
   const datePart = isoDate.split('T')[0]; // Gets "2025-07-28"
   const [year, month, day] = datePart.split('-');
-  return { year, month, day };
+
+  // Only add +1 day for bookings that haven't been corrected yet
+  const needsCorrection = !syncVersion || !syncVersion.includes('v3.1-date-corrected');
+
+  if (needsCorrection) {
+    // DASHBOARD FIX: Add +1 day to match display correction
+    const correctedDate = new Date(`${year}-${month}-${day}T12:00:00.000Z`);
+    correctedDate.setUTCDate(correctedDate.getUTCDate() + 1);
+
+    return {
+      year: correctedDate.getUTCFullYear().toString(),
+      month: (correctedDate.getUTCMonth() + 1).toString().padStart(2, '0'),
+      day: correctedDate.getUTCDate().toString().padStart(2, '0')
+    };
+  } else {
+    // For corrected bookings, use the date as-is
+    return {
+      year: year,
+      month: month,
+      day: day
+    };
+  }
 };
 
 export default function BookingDashboard() {
@@ -78,12 +112,12 @@ export default function BookingDashboard() {
 
     if (monthFilter) {
       filtered = filtered.filter(
-        (b) => getDatePartsForFilter(b.startDate).month === monthFilter
+        (b) => getDatePartsForFilter(b.startDate, b.syncVersion).month === monthFilter
       );
     }
     if (yearFilter) {
       filtered = filtered.filter(
-        (b) => getDatePartsForFilter(b.startDate).year === String(yearFilter)
+        (b) => getDatePartsForFilter(b.startDate, b.syncVersion).year === String(yearFilter)
       );
     }
 
@@ -135,7 +169,7 @@ export default function BookingDashboard() {
 
       let totalHours = "N/A";
       try {
-        const dateParts = getDatePartsForFilter(b.startDate);
+        const dateParts = getDatePartsForFilter(b.startDate, b.syncVersion);
         const dateString = `${dateParts.year}-${dateParts.month.padStart(2, '0')}-${dateParts.day.padStart(2, '0')}`;
         const startDateTime = parse(
           `${dateString} ${b.startTime}`,
@@ -154,13 +188,10 @@ export default function BookingDashboard() {
         console.error("Error calculating total hours", e);
       }
 
-      return `${format(new Date(b.createdAt), "MMM d, yyyy HH:mm:ss")},${
-        b.customerName
-      },${b.customerPhone},${b.customerEmail},${b.studio},${
-        b.paymentStatus
-      },${formatDateForDisplay(b.startDate)},${b.startTime},${
-        b.endTime
-      },${b.subtotal},${b.estimatedTotal},${addOns},${totalHours}`;
+      return `${format(new Date(b.createdAt), "MMM d, yyyy HH:mm:ss")},${b.customerName
+        },${b.customerPhone},${b.customerEmail},${b.studio},${b.paymentStatus
+        },${formatDateForDisplay(b.startDate, b.syncVersion)},${b.startTime},${b.endTime
+        },${b.subtotal},${b.estimatedTotal},${addOns},${totalHours}`;
     });
 
     const csvData = exportHeader + headers + csvRows.join("\n");
@@ -313,7 +344,7 @@ export default function BookingDashboard() {
               filteredBookings.map((booking) => {
                 let totalHours = "N/A";
                 try {
-                  const dateParts = getDatePartsForFilter(booking.startDate);
+                  const dateParts = getDatePartsForFilter(booking.startDate, booking.syncVersion);
                   const dateString = `${dateParts.year}-${dateParts.month.padStart(2, '0')}-${dateParts.day.padStart(2, '0')}`;
                   const startDateTime = parse(
                     `${dateString} ${booking.startTime}`,
@@ -321,14 +352,13 @@ export default function BookingDashboard() {
                     new Date()
                   );
                   const endDateTime = parse(
-                    `${formatInTimeZone(new Date(booking.startDate), "America/New_York", "yyyy-MM-dd")} ${booking.endTime}`,
+                    `${dateString} ${booking.endTime}`,
                     "yyyy-MM-dd h:mm a",
                     new Date()
                   );
-                  totalHours = (
-                    (endDateTime - startDateTime) /
-                    (1000 * 60 * 60)
-                  ).toFixed(1);
+                  totalHours = ((endDateTime - startDateTime) / (1000 * 60 * 60)).toFixed(
+                    1
+                  );
                 } catch (e) {
                   console.error("Error calculating total hours", e);
                 }
@@ -347,7 +377,7 @@ export default function BookingDashboard() {
                     <TableCell>{booking.studio}</TableCell>
                     <TableCell>{booking.paymentStatus}</TableCell>
                     <TableCell>
-                      {formatDateForDisplay(booking.startDate)}
+                      {formatDateForDisplay(booking.startDate, booking.syncVersion)}
                     </TableCell>
                     <TableCell>{booking.startTime}</TableCell>
                     <TableCell>{booking.endTime}</TableCell>

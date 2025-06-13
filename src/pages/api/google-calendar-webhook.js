@@ -37,6 +37,10 @@ export default async function handler(req, res) {
 
     console.log(`📋 Webhook Details: State=${resourceState}, Resource=${resourceId}, Channel=${channelId}`);
 
+    // RATE LIMITING: Prevent rapid duplicate webhook calls
+    const webhookKey = `webhook_${resourceId}_${resourceState}_${Date.now()}`;
+    console.log(`🔄 Processing webhook: ${webhookKey}`);
+
     // Authenticate using the service account
     const auth = new google.auth.GoogleAuth({
       credentials: serviceAccount,
@@ -58,6 +62,9 @@ export default async function handler(req, res) {
     const calendarType = "Manual Booking Calendar";
 
     console.log(`📅 Processing webhook for ${calendarType}`);
+
+    // WEBHOOK SPAM PROTECTION: Add delay for processing
+    await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay
 
     // Handle different webhook states
     if (resourceState === 'sync') {
@@ -127,10 +134,17 @@ export default async function handler(req, res) {
 
         const eventDate = new Date(event.start.dateTime);
 
-        // Check if booking already exists
+        // IMPROVED DUPLICATE DETECTION: Check if booking already exists
         const existingBooking = await Booking.findOne({ calendarEventId: event.id });
 
         if (!existingBooking) {
+          // DUPLICATE SAFETY: Double-check before creating to prevent race conditions
+          const doubleCheckBooking = await Booking.findOne({ calendarEventId: event.id });
+          if (doubleCheckBooking) {
+            console.log(`⚠️ RACE CONDITION PREVENTED: Booking already exists for ${event.id}`);
+            continue;
+          }
+
           // CREATE: New manual booking from calendar event
           const bookingData = await createBookingFromCalendarEvent(event, calendarType);
 
@@ -143,10 +157,18 @@ export default async function handler(req, res) {
             lastSyncUpdate: new Date()
           };
 
-          await Booking.create(safeBookingData);
-
-          console.log(`✅ CREATED manual booking: "${event.summary || 'No title'}" (${event.id}) - Safe: ${eventDate >= MIGRATION_TIMESTAMP}`);
-          bookingsCreated++;
+          try {
+            await Booking.create(safeBookingData);
+            console.log(`✅ CREATED manual booking: "${event.summary || 'No title'}" (${event.id}) - Safe: ${eventDate >= MIGRATION_TIMESTAMP}`);
+            bookingsCreated++;
+          } catch (createError) {
+            if (createError.code === 11000) {
+              // Duplicate key error - booking already exists
+              console.log(`⚠️ DUPLICATE PREVENTED: Booking already exists for ${event.id}`);
+            } else {
+              throw createError;
+            }
+          }
         } else {
           // MIGRATION SAFETY: Check if this booking is protected
           if (SAFE_MODE && !existingBooking.migrationSafe && eventDate < MIGRATION_TIMESTAMP) {

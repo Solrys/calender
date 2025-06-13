@@ -169,17 +169,35 @@ function parseEventDetails(description) {
 
   if (!description) return details;
 
+  // Helper function to strip HTML tags and decode HTML entities
+  function cleanTextContent(text) {
+    if (!text) return "";
+
+    // Remove HTML tags
+    text = text.replace(/<[^>]*>/g, '');
+
+    // Decode common HTML entities
+    text = text.replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&nbsp;/g, ' ');
+
+    return text.trim();
+  }
+
   const lines = description.split('\n');
 
   for (const line of lines) {
     const lowerLine = line.toLowerCase().trim();
 
     if (line.startsWith('Customer Name:')) {
-      details.customerName = line.split(':')[1]?.trim() || '';
+      details.customerName = cleanTextContent(line.split(':')[1]?.trim() || '');
     } else if (line.startsWith('Customer Email:')) {
-      details.customerEmail = line.split(':')[1]?.trim() || '';
+      details.customerEmail = cleanTextContent(line.split(':')[1]?.trim() || '');
     } else if (line.startsWith('Customer Phone:')) {
-      details.customerPhone = line.split(':')[1]?.trim() || '';
+      details.customerPhone = cleanTextContent(line.split(':')[1]?.trim() || '');
     } else if (lowerLine.includes('event: yes')) {
       details.event = true;
     } else if (line.startsWith('Subtotal: $')) {

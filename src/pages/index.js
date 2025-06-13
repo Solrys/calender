@@ -108,7 +108,17 @@ export default function BookingPage() {
           }
 
           // TIMEZONE-NEUTRAL FIX: Extract date directly from ISO string
-          const bookingDateKey = new Date(booking.startDate).toISOString().split('T')[0];
+          let bookingDateKey = new Date(booking.startDate).toISOString().split('T')[0];
+
+          // SMART DATE CORRECTION: Apply same logic as blocking function
+          const needsCorrection = !booking.syncVersion || !booking.syncVersion.includes('v3.1-date-corrected');
+          if (needsCorrection) {
+            // Apply +1 day correction to match the blocking logic
+            const [year, month, day] = bookingDateKey.split('-');
+            const correctedDate = new Date(`${year}-${month}-${day}T12:00:00.000Z`);
+            correctedDate.setUTCDate(correctedDate.getUTCDate() + 1);
+            bookingDateKey = correctedDate.toISOString().split('T')[0];
+          }
 
           if (
             selectedStudio.name === "BOTH THE LAB & THE EXTENSION FOR EVENTS"

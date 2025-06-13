@@ -16,9 +16,28 @@ function parseEventDetails(description = "") {
   let customerName = "",
     customerEmail = "",
     customerPhone = "";
+
+  // Helper function to strip HTML tags and decode HTML entities
+  function cleanTextContent(text) {
+    if (!text) return "";
+
+    // Remove HTML tags
+    text = text.replace(/<[^>]*>/g, '');
+
+    // Decode common HTML entities
+    text = text.replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&nbsp;/g, ' ');
+
+    return text.trim();
+  }
+
   description.split("\n").forEach((line) => {
     const [key, ...rest] = line.split(":");
-    const value = rest.join(":").trim();
+    const value = cleanTextContent(rest.join(":").trim());
     if (/customer name/i.test(key)) customerName = value;
     if (/customer email/i.test(key)) customerEmail = value;
     if (/customer phone/i.test(key)) customerPhone = value;

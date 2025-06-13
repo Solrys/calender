@@ -72,7 +72,24 @@ export function computeBlockedTimesByDate(bookings) {
   bookings.forEach((booking) => {
     // TIMEZONE-NEUTRAL FIX: Extract date directly from ISO string to avoid timezone conversion
     const isoDate = new Date(booking.startDate).toISOString();
-    const dateKey = isoDate.split('T')[0]; // Gets "2025-07-28" directly
+    const datePart = isoDate.split('T')[0]; // Gets "2025-07-19"
+
+    // Only add +1 day for bookings that haven't been corrected yet
+    const needsCorrection = !booking.syncVersion || !booking.syncVersion.includes('v3.1-date-corrected');
+
+    let dateKey;
+    if (needsCorrection) {
+      // BLOCKING FIX: Add +1 day to match dashboard display and Google Calendar for uncorrected bookings
+      const [year, month, day] = datePart.split('-');
+
+      // Create date at noon UTC to avoid timezone edge cases
+      const correctedDate = new Date(`${year}-${month}-${day}T12:00:00.000Z`);
+      correctedDate.setUTCDate(correctedDate.getUTCDate() + 1);
+      dateKey = correctedDate.toISOString().split('T')[0];
+    } else {
+      // For corrected bookings, use the date as-is
+      dateKey = datePart;
+    }
 
     if (!blocked[dateKey]) {
       blocked[dateKey] = new Set();
