@@ -92,8 +92,8 @@ End Time: ${endTime}${updatedBooking.event ? '\nEvent: Yes (Cleaning fee applied
 Subtotal: $${subtotal}
 Studio Cost: $${studioCost}
 Estimated Total: $${estimatedTotal}`,
-      start: { dateTime: startISO, timeZone: "America/New_York" },
-      end: { dateTime: endISO, timeZone: "America/New_York" },
+      start: { dateTime: startISO, timeZone: "America/Los_Angeles" },
+      end: { dateTime: endISO, timeZone: "America/Los_Angeles" },
     };
 
     try {

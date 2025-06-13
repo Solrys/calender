@@ -93,9 +93,9 @@ export default async function handler(req, res) {
       if (!updatedBooking.calendarEventId) {
         try {
           const formattedDate = format(new Date(startDate), "yyyy-MM-dd");
-          
+
           // Use proper timezone handling instead of hardcoded offset
-          const timeZone = "America/New_York";
+          const timeZone = "America/Los_Angeles";
           const startISO = new Date(
             `${formattedDate}T${convertTo24Hour(startTime)}`
           );
@@ -131,7 +131,7 @@ Estimated Total: $${estimatedTotal}`,
 
           const calendarEvent = await createCalendarEvent(eventData);
           console.log("✅ Google Calendar event created via webhook:", calendarEvent.id);
-          
+
           // Update booking with calendar event ID
           await Booking.findByIdAndUpdate(bookingId, {
             calendarEventId: calendarEvent.id,

@@ -74,30 +74,43 @@ export default async function handler(req, res) {
       if (!id) {
         return res.status(400).json({ message: "Missing booking id" });
       }
+
       const booking = await Booking.findById(id);
       if (!booking) {
         return res.status(404).json({ message: "Booking not found" });
       }
 
-      // If booking has a Google Calendar event, attempt to delete it
+      // If booking has a Google Calendar event, attempt to delete it from the correct calendar
       if (booking.calendarEventId) {
         try {
-          await deleteCalendarEvent(booking.calendarEventId);
+          // UPDATED: Determine booking type and delete from correct calendar
+          const bookingType = booking.paymentStatus === "manual" ? "manual" : "website";
+
+          console.log(`🗑️ Deleting ${bookingType} booking calendar event: ${booking.calendarEventId}`);
+          await deleteCalendarEvent(booking.calendarEventId, bookingType);
+
+          console.log(`✅ Successfully deleted calendar event for ${bookingType} booking`);
         } catch (calError) {
-          console.error("Error deleting calendar event:", calError);
-          // You can choose to either continue with deletion or abort here
+          console.error("❌ Error deleting calendar event:", calError);
+          // Continue with booking deletion even if calendar deletion fails
+          console.log("⚠️ Continuing with database booking deletion despite calendar error");
         }
       }
+
       const deletedBooking = await Booking.findByIdAndDelete(id);
       if (!deletedBooking) {
         return res.status(404).json({ message: "Booking not found" });
       }
-      res
-        .status(200)
-        .json({ message: "Booking cancelled", booking: deletedBooking });
+
+      console.log(`✅ Successfully deleted booking: ${deletedBooking.customerName || 'No name'} - ${deletedBooking.studio}`);
+
+      res.status(200).json({
+        message: "Booking cancelled successfully",
+        booking: deletedBooking
+      });
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: "Server error" });
+      console.error("❌ Error cancelling booking:", error);
+      res.status(500).json({ message: "Server error", error: error.message });
     }
   } else {
     res.status(405).json({ message: "Method not allowed" });

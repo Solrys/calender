@@ -23,16 +23,27 @@ google.options({ auth: authClient });
 
 // Use the Calendar API
 const calendar = google.calendar("v3");
+
 async function createCalendarEvent(eventData) {
   try {
-    const calendarId = process.env.GOOGLE_CALENDAR_ID_WEBSITE || process.env.GOOGLE_CALENDAR_ID;
+    // UPDATED: Use Website Booking Calendar for website bookings
+    // Manual bookings are created directly in Manual Booking Calendar by admin
+    const calendarId = process.env.GOOGLE_CALENDAR_ID_WEBSITE;
+
+    // UPDATED: Ensure timezone is Pacific Time for LA client
+    if (eventData.start && eventData.start.dateTime) {
+      eventData.start.timeZone = "America/Los_Angeles";
+    }
+    if (eventData.end && eventData.end.dateTime) {
+      eventData.end.timeZone = "America/Los_Angeles";
+    }
 
     const response = await calendar.events.insert({
       calendarId,
       requestBody: eventData,
     });
 
-    console.log("✅ Calendar event created:", response.data.id);
+    console.log("✅ Website booking calendar event created:", response.data.id);
     return response.data;
   } catch (error) {
     console.error("❌ Failed to create calendar event");
@@ -54,16 +65,28 @@ async function createCalendarEvent(eventData) {
 
 export default createCalendarEvent;
 
-export async function deleteCalendarEvent(eventId) {
+export async function deleteCalendarEvent(eventId, bookingType = "website") {
   try {
+    // UPDATED: Delete from appropriate calendar based on booking type
+    let calendarId;
+
+    if (bookingType === "manual") {
+      // Manual bookings are in the Manual Booking Calendar
+      calendarId = process.env.GOOGLE_CALENDAR_ID;
+    } else {
+      // Website bookings are in the Website Booking Calendar
+      calendarId = process.env.GOOGLE_CALENDAR_ID_WEBSITE;
+    }
+
     await calendar.events.delete({
-      calendarId: process.env.GOOGLE_CALENDAR_ID_WEBSITE, // your calendar id
+      calendarId,
       eventId,
     });
-    console.log("Google Calendar event deleted:", eventId);
+
+    console.log(`✅ Calendar event deleted from ${bookingType} calendar:`, eventId);
     return true;
   } catch (error) {
-    console.error("Error deleting event from Google Calendar:", error);
+    console.error(`❌ Error deleting event from ${bookingType} calendar:`, error);
     throw error;
   }
 }

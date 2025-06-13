@@ -23,6 +23,13 @@ export default async function handler(req, res) {
   try {
     console.log("🔔 Received Google Calendar push notification");
 
+    // Get webhook headers to understand what changed
+    const resourceId = req.headers['x-goog-resource-id'];
+    const resourceState = req.headers['x-goog-resource-state'];
+    const channelId = req.headers['x-goog-channel-id'];
+
+    console.log(`📋 Webhook Details: State=${resourceState}, Resource=${resourceId}, Channel=${channelId}`);
+
     // Authenticate using the service account
     const auth = new google.auth.GoogleAuth({
       credentials: serviceAccount,
@@ -34,56 +41,76 @@ export default async function handler(req, res) {
       auth,
     });
 
-    // FIXED: Only handle Manual Booking Calendar (where users manually create bookings)
-    const calendarId = process.env.GOOGLE_CALENDAR_ID; // Manual Booking Calendar
-    console.log(`📅 Processing webhook for Manual Booking Calendar`);
+    // Determine which calendar triggered the webhook
+    const manualCalendarId = process.env.GOOGLE_CALENDAR_ID; // Manual Booking Calendar
+    const websiteCalendarId = process.env.GOOGLE_CALENDAR_ID_WEBSITE; // Website Booking Calendar
 
-    // FIXED: Extended time range - fetch from 30 days ago to 1 year in future
-    // This ensures we catch all events that might be created/modified
+    // For now, we'll process the manual calendar (where admin creates events)
+    // Website calendar events are created by the system, so we don't need to sync them back
+    const calendarId = manualCalendarId;
+    const calendarType = "Manual Booking Calendar";
+
+    console.log(`📅 Processing webhook for ${calendarType}`);
+
+    // Handle different webhook states
+    if (resourceState === 'sync') {
+      console.log("🔄 Initial sync notification - no action needed");
+      return res.status(200).json({ message: "Sync notification received" });
+    }
+
+    // For exists/not_exists states, we need to check what actually changed
+    // Get recent events to see what was added/modified/deleted
     const now = new Date();
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const oneYearFromNow = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000); // Last 24 hours
+    const oneWeekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // Next week
 
-    const timeMin = thirtyDaysAgo.toISOString();
-    const timeMax = oneYearFromNow.toISOString();
+    console.log(`📅 Checking events from ${oneDayAgo.toDateString()} to ${oneWeekFromNow.toDateString()}`);
 
-    console.log(`📅 Fetching events from ${thirtyDaysAgo.toDateString()} to ${oneYearFromNow.toDateString()}`);
+    let events = [];
+    try {
+      const calendarRes = await calendar.events.list({
+        calendarId,
+        timeMin: oneDayAgo.toISOString(),
+        timeMax: oneWeekFromNow.toISOString(),
+        singleEvents: true,
+        orderBy: "startTime",
+        maxResults: 100
+      });
+      events = calendarRes.data.items || [];
+    } catch (calendarError) {
+      console.error("❌ Error fetching calendar events:", calendarError);
+      return res.status(500).json({ message: "Error fetching calendar events" });
+    }
 
-    // Fetch events from the manual booking calendar within the extended time window
-    const calendarRes = await calendar.events.list({
-      calendarId,
-      timeMin,
-      timeMax,
-      singleEvents: true,
-      orderBy: "startTime",
-      maxResults: 500 // Increased limit to catch more events
-    });
-
-    const events = calendarRes.data.items || [];
-    console.log(`📅 Fetched ${events.length} events from Manual Booking Calendar`);
+    console.log(`📅 Found ${events.length} events in recent timeframe`);
 
     let bookingsCreated = 0;
     let bookingsUpdated = 0;
     let bookingsSkipped = 0;
 
-    // Get all current calendar event IDs to detect deletions
-    const currentEventIds = events.map(event => event.id);
-
-    // Process each event: only update if actually changed
+    // Process each event
     for (const event of events) {
       try {
+        // Skip all-day events
+        if (!event.start.dateTime) {
+          console.log(`⏭️ Skipping all-day event: ${event.summary}`);
+          continue;
+        }
+
         // Check if booking already exists
         const existingBooking = await Booking.findOne({ calendarEventId: event.id });
 
-        const bookingData = await createBookingFromCalendarEvent(event);
-
         if (!existingBooking) {
-          // CREATE: New booking
+          // CREATE: New manual booking from calendar event
+          const bookingData = await createBookingFromCalendarEvent(event);
+
           await Booking.create({
             ...bookingData,
-            calendarEventId: event.id
+            calendarEventId: event.id,
+            paymentStatus: "manual" // Manual bookings from admin calendar
           });
-          console.log(`✅ CREATED new booking: "${event.summary || 'No title'}" (${event.id})`);
+
+          console.log(`✅ CREATED manual booking: "${event.summary || 'No title'}" (${event.id})`);
           bookingsCreated++;
         } else {
           // CHECK: Only update if event was actually modified
@@ -92,10 +119,13 @@ export default async function handler(req, res) {
 
           if (eventLastModified > bookingLastModified) {
             // UPDATE: Event was modified after booking
+            const bookingData = await createBookingFromCalendarEvent(event);
+
             await Booking.updateOne(
               { calendarEventId: event.id },
               { $set: bookingData }
             );
+
             console.log(`📝 UPDATED booking (event modified): "${event.summary || 'No title'}" (${event.id})`);
             bookingsUpdated++;
           } else {
@@ -109,20 +139,36 @@ export default async function handler(req, res) {
       }
     }
 
-    // HANDLE DELETIONS: Remove bookings for deleted calendar events
+    // HANDLE INDIVIDUAL EVENT DELETIONS
+    // Check if any database bookings have calendar events that no longer exist
     let bookingsDeleted = 0;
-    const deletedBookings = await Booking.find({
-      calendarEventId: { $exists: true, $nin: currentEventIds },
-      paymentStatus: "manual" // Only delete manual bookings, not website bookings
+
+    // Get all manual bookings (from admin calendar) that should exist
+    const manualBookings = await Booking.find({
+      paymentStatus: "manual",
+      calendarEventId: { $exists: true, $ne: null, $ne: "" }
     });
 
-    if (deletedBookings.length > 0) {
-      console.log(`🗑️ Found ${deletedBookings.length} bookings for deleted calendar events`);
+    console.log(`🔍 Checking ${manualBookings.length} manual bookings for deleted events`);
 
-      for (const booking of deletedBookings) {
-        await Booking.deleteOne({ _id: booking._id });
-        console.log(`🗑️ DELETED booking for removed event: "${booking.customerName || 'No name'}" (${booking.calendarEventId})`);
-        bookingsDeleted++;
+    // Check each manual booking to see if its calendar event still exists
+    for (const booking of manualBookings) {
+      try {
+        // Try to fetch the specific event
+        await calendar.events.get({
+          calendarId,
+          eventId: booking.calendarEventId
+        });
+        // Event exists, no action needed
+      } catch (eventError) {
+        if (eventError.code === 404) {
+          // Event was deleted from calendar, delete the booking
+          await Booking.deleteOne({ _id: booking._id });
+          console.log(`🗑️ DELETED booking for removed event: "${booking.customerName || 'No name'}" (${booking.calendarEventId})`);
+          bookingsDeleted++;
+        } else {
+          console.error(`❌ Error checking event ${booking.calendarEventId}:`, eventError);
+        }
       }
     }
 
@@ -136,13 +182,14 @@ export default async function handler(req, res) {
       bookingsUpdated,
       bookingsSkipped,
       bookingsDeleted,
-      calendarType: 'Manual Booking Calendar',
-      timeRange: `${thirtyDaysAgo.toDateString()} to ${oneYearFromNow.toDateString()}`
+      calendarType,
+      resourceState,
+      timeRange: `${oneDayAgo.toDateString()} to ${oneWeekFromNow.toDateString()}`
     });
   } catch (error) {
-    console.error("❌ Error in manual booking webhook:", error);
+    console.error("❌ Error in calendar webhook:", error);
     res
       .status(500)
-      .json({ message: "Error syncing manual booking events", error: error.message });
+      .json({ message: "Error processing calendar webhook", error: error.message });
   }
 }
