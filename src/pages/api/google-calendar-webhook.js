@@ -66,24 +66,44 @@ export default async function handler(req, res) {
     }
 
     // For exists/not_exists states, we need to check what actually changed
-    // Get recent events to see what was added/modified/deleted
+    // EFFICIENT APPROACH: First try to get recently updated events
     const now = new Date();
     const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000); // Last 24 hours
-    const oneWeekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // Next week
 
-    console.log(`📅 Checking events from ${oneDayAgo.toDateString()} to ${oneWeekFromNow.toDateString()}`);
+    console.log(`📅 Checking for events updated since ${oneDayAgo.toDateString()}`);
 
     let events = [];
     try {
-      const calendarRes = await calendar.events.list({
+      // First, try to get recently updated events (more efficient)
+      const recentRes = await calendar.events.list({
         calendarId,
-        timeMin: oneDayAgo.toISOString(),
-        timeMax: oneWeekFromNow.toISOString(),
+        updatedMin: oneDayAgo.toISOString(),
         singleEvents: true,
-        orderBy: "startTime",
+        orderBy: "updated",
         maxResults: 100
       });
-      events = calendarRes.data.items || [];
+
+      const recentEvents = recentRes.data.items || [];
+      console.log(`📅 Found ${recentEvents.length} recently updated events`);
+
+      // If we found recent events, use those
+      if (recentEvents.length > 0) {
+        events = recentEvents;
+      } else {
+        // Fallback: Check a broader range for new events
+        const sixMonthsFromNow = new Date(now.getTime() + 6 * 30 * 24 * 60 * 60 * 1000);
+        console.log(`📅 Fallback: Checking events from ${oneDayAgo.toDateString()} to ${sixMonthsFromNow.toDateString()}`);
+
+        const calendarRes = await calendar.events.list({
+          calendarId,
+          timeMin: oneDayAgo.toISOString(),
+          timeMax: sixMonthsFromNow.toISOString(),
+          singleEvents: true,
+          orderBy: "startTime",
+          maxResults: 500
+        });
+        events = calendarRes.data.items || [];
+      }
     } catch (calendarError) {
       console.error("❌ Error fetching calendar events:", calendarError);
       return res.status(500).json({ message: "Error fetching calendar events" });
@@ -227,7 +247,7 @@ export default async function handler(req, res) {
       migrationTimestamp: MIGRATION_TIMESTAMP.toISOString(),
       safeMode: SAFE_MODE,
       syncVersion: SYNC_VERSION,
-      timeRange: `${oneDayAgo.toDateString()} to ${oneWeekFromNow.toDateString()}`
+      timeRange: `Recently updated events since ${oneDayAgo.toDateString()}`
     });
   } catch (error) {
     console.error("❌ Error in calendar webhook:", error);
