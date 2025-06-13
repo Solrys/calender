@@ -107,6 +107,9 @@ export default function BookingPage() {
             return false;
           }
 
+          // TIMEZONE-NEUTRAL FIX: Extract date directly from ISO string
+          const bookingDateKey = new Date(booking.startDate).toISOString().split('T')[0];
+
           if (
             selectedStudio.name === "BOTH THE LAB & THE EXTENSION FOR EVENTS"
           ) {
@@ -115,13 +118,12 @@ export default function BookingPage() {
               (booking.studio === "THE LAB" ||
                 booking.studio === "THE EXTENSION" ||
                 booking.studio === "BOTH THE LAB & THE EXTENSION FOR EVENTS") &&
-              format(new Date(booking.startDate), "yyyy-MM-dd") ===
-                formattedDate
+              bookingDateKey === formattedDate
             );
           }
           return (
             booking.studio === selectedStudio.name &&
-            format(new Date(booking.startDate), "yyyy-MM-dd") === formattedDate
+            bookingDateKey === formattedDate
           );
         });
         const blockedByDate = computeBlockedTimesByDate(filteredBookings);
@@ -144,7 +146,7 @@ export default function BookingPage() {
   // Determine minimum allowed booking hours (special studio requires at least 2)
   const minBookingHours =
     selectedStudio &&
-    selectedStudio.name === "BOTH THE LAB & THE EXTENSION FOR EVENTS"
+      selectedStudio.name === "BOTH THE LAB & THE EXTENSION FOR EVENTS"
       ? 2
       : 0;
 

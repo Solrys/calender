@@ -70,8 +70,10 @@ export function generateDailySlots() {
 export function computeBlockedTimesByDate(bookings) {
   const blocked = {};
   bookings.forEach((booking) => {
-    // Use startDate as the key (assuming bookings only have one date)
-    const dateKey = format(new Date(booking.startDate), "yyyy-MM-dd");
+    // TIMEZONE-NEUTRAL FIX: Extract date directly from ISO string to avoid timezone conversion
+    const isoDate = new Date(booking.startDate).toISOString();
+    const dateKey = isoDate.split('T')[0]; // Gets "2025-07-28" directly
+
     if (!blocked[dateKey]) {
       blocked[dateKey] = new Set();
     }
