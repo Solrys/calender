@@ -1,11 +1,18 @@
-// Calendar Sync Script
+// Calendar Sync Script - SAFE MIGRATION VERSION
 // This script fetches all bookings from both Google Calendar IDs from today onwards
 // and ensures they exist in the database to properly block time slots
+// 
+// MIGRATION SAFETY: Uses timestamps and version tags to protect existing data
 
 const mongoose = require('mongoose');
 const { google } = require('googleapis');
 const fs = require('fs');
 const { formatInTimeZone } = require('date-fns-tz');
+
+// MIGRATION SETTINGS - Change these to control the migration
+const MIGRATION_TIMESTAMP = new Date('2024-06-13T00:00:00Z'); // Only affect events after this date
+const SYNC_VERSION = 'v2.0-pacific-timezone'; // Version tag for tracking
+const SAFE_MODE = true; // Set to false only when you're confident
 
 // Load environment variables manually
 function loadEnv() {
@@ -47,7 +54,7 @@ function loadEnv() {
 
 const env = loadEnv();
 
-// Booking Schema
+// Booking Schema - ENHANCED with migration tracking
 const BookingSchema = new mongoose.Schema({
   studio: { type: String, required: true },
   startDate: { type: Date, required: true },
@@ -65,6 +72,10 @@ const BookingSchema = new mongoose.Schema({
   event: { type: Boolean, default: false },
   calendarEventId: { type: String, unique: true, sparse: true },
   createdAt: { type: Date, default: Date.now },
+  // MIGRATION TRACKING FIELDS
+  syncVersion: { type: String, default: null }, // Track which sync version created this
+  migrationSafe: { type: Boolean, default: true }, // Mark as safe to modify
+  lastSyncUpdate: { type: Date, default: null }, // When was this last updated by sync
 });
 
 const Booking = mongoose.model('Booking', BookingSchema);
@@ -96,8 +107,8 @@ async function initializeGoogleCalendar() {
   }
 }
 
-// Helper: Convert time to 12-hour format
-function convertTimeTo12Hour(date, timeZone = "America/New_York") {
+// Helper: Convert time to 12-hour format - UPDATED for Pacific Time
+function convertTimeTo12Hour(date, timeZone = "America/Los_Angeles") {
   return formatInTimeZone(date, timeZone, "h:mm a");
 }
 
@@ -183,9 +194,9 @@ function parseEventDetails(description) {
   return details;
 }
 
-// Convert calendar event to booking data
-function createBookingFromCalendarEvent(event) {
-  const timeZone = "America/New_York";
+// SAFE Convert calendar event to booking data - ENHANCED with migration safety
+function createBookingFromCalendarEvent(event, calendarType = "Manual Booking Calendar", isMigration = false) {
+  const timeZone = "America/Los_Angeles"; // UPDATED: Pacific Time for LA client
 
   // Parse the UTC instants from the event
   const startUtc = new Date(event.start.dateTime || event.start.date);
@@ -211,7 +222,21 @@ function createBookingFromCalendarEvent(event) {
   const studio = parseStudio(event.summary);
   const eventDetails = parseEventDetails(event.description);
 
-  // Build booking object
+  // MIGRATION SAFETY: Determine payment status based on calendar type and migration status
+  let paymentStatus;
+  if (isMigration && startUtc >= MIGRATION_TIMESTAMP) {
+    // NEW LOGIC: Only for events after migration timestamp
+    if (calendarType === "Website Booking Calendar") {
+      paymentStatus = "success"; // Website bookings are completed payments
+    } else {
+      paymentStatus = "manual"; // Manual calendar bookings are admin-created
+    }
+  } else {
+    // LEGACY LOGIC: Keep existing behavior for old events
+    paymentStatus = "manual"; // Default to manual for safety
+  }
+
+  // Build booking object with migration tracking
   return {
     studio,
     startDate,
@@ -222,13 +247,17 @@ function createBookingFromCalendarEvent(event) {
     studioCost: eventDetails.studioCost,
     cleaningFee: eventDetails.cleaningFee,
     estimatedTotal: eventDetails.estimatedTotal,
-    paymentStatus: "manual", // Calendar events are considered manual bookings
+    paymentStatus,
     customerName: eventDetails.customerName,
     customerEmail: eventDetails.customerEmail,
     customerPhone: eventDetails.customerPhone,
     event: eventDetails.event,
     calendarEventId: event.id,
     createdAt: new Date(),
+    // MIGRATION TRACKING
+    syncVersion: isMigration ? SYNC_VERSION : null,
+    migrationSafe: isMigration && startUtc >= MIGRATION_TIMESTAMP,
+    lastSyncUpdate: new Date(),
   };
 }
 
@@ -282,8 +311,8 @@ async function bookingExistsInDB(calendarEventId) {
   }
 }
 
-// Create booking in database
-async function createBookingInDB(bookingData) {
+// SAFE Create booking in database - ENHANCED with migration safety
+async function createBookingInDB(bookingData, isUpdate = false) {
   try {
     // Check if booking already exists
     const existingBooking = await Booking.findOne({
@@ -291,8 +320,30 @@ async function createBookingInDB(bookingData) {
     });
 
     if (existingBooking) {
-      console.log(`   ⚠️  Booking already exists for event ${bookingData.calendarEventId}`);
-      return existingBooking;
+      // MIGRATION SAFETY: Only update if it's safe to do so
+      if (SAFE_MODE && !existingBooking.migrationSafe && !isUpdate) {
+        console.log(`   🛡️ PROTECTED: Existing booking preserved for event ${bookingData.calendarEventId}`);
+        return existingBooking;
+      }
+
+      if (isUpdate) {
+        // Update existing booking with migration tracking
+        const updatedBooking = await Booking.findOneAndUpdate(
+          { calendarEventId: bookingData.calendarEventId },
+          {
+            $set: {
+              ...bookingData,
+              lastSyncUpdate: new Date()
+            }
+          },
+          { new: true }
+        );
+        console.log(`   📝 UPDATED booking: ${bookingData.customerName || 'No name'} - ${bookingData.studio} - ${bookingData.startTime}-${bookingData.endTime}`);
+        return updatedBooking;
+      } else {
+        console.log(`   ⚠️ Booking already exists for event ${bookingData.calendarEventId}`);
+        return existingBooking;
+      }
     }
 
     const booking = new Booking(bookingData);
@@ -302,7 +353,7 @@ async function createBookingInDB(bookingData) {
 
   } catch (error) {
     if (error.code === 11000) { // Duplicate key error
-      console.log(`   ⚠️  Duplicate booking skipped for event ${bookingData.calendarEventId}`);
+      console.log(`   ⚠️ Duplicate booking skipped for event ${bookingData.calendarEventId}`);
       return null;
     }
     console.error('❌ Error creating booking in DB:', error);
@@ -310,14 +361,18 @@ async function createBookingInDB(bookingData) {
   }
 }
 
-// Main sync function
+// Main sync function - ENHANCED with migration safety
 async function syncCalendarWithDatabase() {
   try {
-    console.log('�� CALENDAR SYNC TOOL - JUNE 1ST ONWARDS');
-    console.log('==========================================');
+    console.log('📅 CALENDAR SYNC TOOL - SAFE MIGRATION VERSION');
+    console.log('===============================================');
+    console.log(`🛡️ SAFE MODE: ${SAFE_MODE ? 'ENABLED' : 'DISABLED'}`);
+    console.log(`📅 Migration Timestamp: ${MIGRATION_TIMESTAMP.toISOString()}`);
+    console.log(`🏷️ Sync Version: ${SYNC_VERSION}`);
     console.log('📅 Fetching ALL events from June 1st, 2024 to present + future');
     console.log('🔄 Will sync from BOTH calendars: Website Booking + Manual Booking');
-    console.log('⚠️  NOTE: Will NOT modify or delete anything in Google Calendar');
+    console.log('⚠️ NOTE: Will NOT modify or delete anything in Google Calendar');
+    console.log('🛡️ NOTE: Existing bookings before migration timestamp are PROTECTED');
 
     // Connect to MongoDB
     await mongoose.connect(env.MONGODB_URI);
@@ -350,6 +405,7 @@ async function syncCalendarWithDatabase() {
     let totalEvents = 0;
     let totalNewBookings = 0;
     let totalExistingBookings = 0;
+    let totalProtectedBookings = 0;
 
     // Fetch and process events from each calendar
     for (const calendarConfig of calendarIds) {
@@ -368,21 +424,31 @@ async function syncCalendarWithDatabase() {
         try {
           // Skip all-day events
           if (!event.start.dateTime) {
-            console.log(`   ⏭️  Skipping all-day event: ${event.summary}`);
+            console.log(`   ⏭️ Skipping all-day event: ${event.summary}`);
             continue;
           }
 
           // Check if booking already exists
           const exists = await bookingExistsInDB(event.id);
+          const eventDate = new Date(event.start.dateTime);
 
           if (exists) {
+            const existingBooking = await Booking.findOne({ calendarEventId: event.id });
+
+            // MIGRATION SAFETY: Check if this booking is protected
+            if (SAFE_MODE && !existingBooking.migrationSafe && eventDate < MIGRATION_TIMESTAMP) {
+              totalProtectedBookings++;
+              console.log(`   🛡️ PROTECTED: ${event.summary} (before migration timestamp)`);
+              continue;
+            }
+
             totalExistingBookings++;
             console.log(`   ✓ Booking exists: ${event.summary}`);
             continue;
           }
 
-          // Create booking data from calendar event
-          const bookingData = createBookingFromCalendarEvent(event);
+          // Create booking data from calendar event with migration safety
+          const bookingData = createBookingFromCalendarEvent(event, calendarConfig.name, true);
 
           // Create booking in database
           const newBooking = await createBookingInDB(bookingData);
@@ -397,10 +463,11 @@ async function syncCalendarWithDatabase() {
     }
 
     // Summary
-    console.log('\n📊 SYNC SUMMARY:');
-    console.log('================');
+    console.log('\n📊 SAFE MIGRATION SYNC SUMMARY:');
+    console.log('================================');
     console.log(`Total calendar events processed: ${totalEvents}`);
     console.log(`Existing bookings found: ${totalExistingBookings}`);
+    console.log(`Protected bookings (unchanged): ${totalProtectedBookings}`);
     console.log(`New bookings created: ${totalNewBookings}`);
 
     if (totalNewBookings > 0) {
@@ -408,6 +475,10 @@ async function syncCalendarWithDatabase() {
       console.log(`${totalNewBookings} new booking(s) added to database to properly block time slots.`);
     } else {
       console.log('\n✅ Calendar sync completed - all events were already in database.');
+    }
+
+    if (totalProtectedBookings > 0) {
+      console.log(`\n🛡️ ${totalProtectedBookings} existing bookings were PROTECTED from changes.`);
     }
 
     // Verification: Check for any bookings without calendar events
@@ -422,7 +493,7 @@ async function syncCalendarWithDatabase() {
     });
 
     if (orphanedBookings.length > 0) {
-      console.log(`⚠️  Found ${orphanedBookings.length} bookings without calendar events:`);
+      console.log(`⚠️ Found ${orphanedBookings.length} bookings without calendar events:`);
       orphanedBookings.forEach(booking => {
         console.log(`   - ${booking.customerName || 'No name'} - ${booking.studio} - ${booking.startDate.toDateString()} ${booking.startTime}`);
       });
@@ -445,6 +516,8 @@ async function syncCalendarWithDatabase() {
 async function dryRun() {
   console.log('🔍 DRY RUN MODE - No changes will be made');
   console.log('=========================================');
+  console.log(`🛡️ SAFE MODE: ${SAFE_MODE ? 'ENABLED' : 'DISABLED'}`);
+  console.log(`📅 Migration Timestamp: ${MIGRATION_TIMESTAMP.toISOString()}`);
   console.log('📅 Would fetch ALL events from June 1st, 2024 onwards');
   console.log('🔄 Would sync from BOTH calendars: Website Booking + Manual Booking');
 
@@ -473,6 +546,7 @@ async function dryRun() {
 
     let totalEvents = 0;
     let wouldCreate = 0;
+    let wouldProtect = 0;
 
     for (const calendarConfig of calendarIds) {
       const events = await fetchCalendarEvents(calendar, calendarConfig.id, calendarConfig.name);
@@ -482,10 +556,15 @@ async function dryRun() {
         if (!event.start.dateTime) continue; // Skip all-day events
 
         const exists = await bookingExistsInDB(event.id);
+        const eventDate = new Date(event.start.dateTime);
+
         if (!exists) {
           wouldCreate++;
-          const bookingData = createBookingFromCalendarEvent(event);
-          console.log(`   📝 Would create: ${bookingData.customerName || 'No name'} - ${bookingData.studio} - ${bookingData.startTime}-${bookingData.endTime}`);
+          const bookingData = createBookingFromCalendarEvent(event, calendarConfig.name, true);
+          console.log(`   📝 Would create: ${bookingData.customerName || 'No name'} - ${bookingData.studio} - ${bookingData.startTime}-${bookingData.endTime} (${bookingData.paymentStatus})`);
+        } else if (SAFE_MODE && eventDate < MIGRATION_TIMESTAMP) {
+          wouldProtect++;
+          console.log(`   🛡️ Would protect: ${event.summary} (before migration timestamp)`);
         }
       }
     }
@@ -493,6 +572,7 @@ async function dryRun() {
     console.log(`\n📊 DRY RUN SUMMARY:`);
     console.log(`Total events found: ${totalEvents}`);
     console.log(`Would create: ${wouldCreate} new bookings`);
+    console.log(`Would protect: ${wouldProtect} existing bookings`);
     console.log(`\nTo execute the sync, run: node calendar-sync.js --execute`);
 
   } catch (error) {

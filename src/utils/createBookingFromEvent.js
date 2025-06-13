@@ -1,6 +1,9 @@
 // utils/createBookingFromCalendarEvent.js
 import { formatInTimeZone } from "date-fns-tz";
 
+// MIGRATION SAFETY SETTINGS - Must match calendar-sync.js and webhook
+const MIGRATION_TIMESTAMP = new Date('2024-06-13T00:00:00Z');
+
 // Helper: Convert a UTC Date to "h:mm a" in the given time zone
 function convertTimeTo12Hour(date, timeZone = "America/Los_Angeles") {
   return formatInTimeZone(date, timeZone, "h:mm a");
@@ -29,7 +32,7 @@ function parseStudio(summary = "") {
     : summary;
 }
 
-export async function createBookingFromCalendarEvent(event) {
+export async function createBookingFromCalendarEvent(event, calendarType = "Manual Booking Calendar") {
   // UPDATED: Use Pacific Time for LA client
   const timeZone = "America/Los_Angeles";
 
@@ -58,7 +61,21 @@ export async function createBookingFromCalendarEvent(event) {
     event.description
   );
 
-  // 6. Build your booking object
+  // 6. MIGRATION SAFETY: Determine payment status based on calendar type and event date
+  let paymentStatus;
+  if (startUtc >= MIGRATION_TIMESTAMP) {
+    // NEW LOGIC: Only for events after migration timestamp
+    if (calendarType === "Website Booking Calendar") {
+      paymentStatus = "success"; // Website bookings are completed payments
+    } else {
+      paymentStatus = "manual"; // Manual calendar bookings are admin-created
+    }
+  } else {
+    // LEGACY LOGIC: Keep existing behavior for old events
+    paymentStatus = "manual"; // Default to manual for safety
+  }
+
+  // 7. Build your booking object
   return {
     studio,
     startDate,
@@ -69,7 +86,7 @@ export async function createBookingFromCalendarEvent(event) {
     studioCost: 0,
     cleaningFee: 0,
     estimatedTotal: 0,
-    paymentStatus: "manual",
+    paymentStatus,
     customerName,
     customerEmail,
     customerPhone,

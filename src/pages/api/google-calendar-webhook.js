@@ -3,6 +3,11 @@ import dbConnect from "@/lib/dbConnect";
 import Booking from "@/models/Booking";
 import { createBookingFromCalendarEvent } from "@/utils/createBookingFromEvent";
 
+// MIGRATION SAFETY SETTINGS - Must match calendar-sync.js
+const MIGRATION_TIMESTAMP = new Date('2024-06-13T00:00:00Z'); // Only affect events after this date
+const SYNC_VERSION = 'v2.0-pacific-timezone'; // Version tag for tracking
+const SAFE_MODE = true; // Set to false only when you're confident
+
 // Clean up and parse the service account JSON from the environment variable
 let serviceAccountKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
 if (
@@ -22,6 +27,8 @@ export default async function handler(req, res) {
 
   try {
     console.log("🔔 Received Google Calendar push notification");
+    console.log(`🛡️ SAFE MODE: ${SAFE_MODE ? 'ENABLED' : 'DISABLED'}`);
+    console.log(`📅 Migration Timestamp: ${MIGRATION_TIMESTAMP.toISOString()}`);
 
     // Get webhook headers to understand what changed
     const resourceId = req.headers['x-goog-resource-id'];
@@ -87,8 +94,9 @@ export default async function handler(req, res) {
     let bookingsCreated = 0;
     let bookingsUpdated = 0;
     let bookingsSkipped = 0;
+    let bookingsProtected = 0;
 
-    // Process each event
+    // Process each event with migration safety
     for (const event of events) {
       try {
         // Skip all-day events
@@ -97,33 +105,55 @@ export default async function handler(req, res) {
           continue;
         }
 
+        const eventDate = new Date(event.start.dateTime);
+
         // Check if booking already exists
         const existingBooking = await Booking.findOne({ calendarEventId: event.id });
 
         if (!existingBooking) {
           // CREATE: New manual booking from calendar event
-          const bookingData = await createBookingFromCalendarEvent(event);
+          const bookingData = await createBookingFromCalendarEvent(event, calendarType);
 
-          await Booking.create({
+          // MIGRATION SAFETY: Add migration tracking for new bookings
+          const safeBookingData = {
             ...bookingData,
             calendarEventId: event.id,
-            paymentStatus: "manual" // Manual bookings from admin calendar
-          });
+            syncVersion: SYNC_VERSION,
+            migrationSafe: eventDate >= MIGRATION_TIMESTAMP,
+            lastSyncUpdate: new Date()
+          };
 
-          console.log(`✅ CREATED manual booking: "${event.summary || 'No title'}" (${event.id})`);
+          await Booking.create(safeBookingData);
+
+          console.log(`✅ CREATED manual booking: "${event.summary || 'No title'}" (${event.id}) - Safe: ${eventDate >= MIGRATION_TIMESTAMP}`);
           bookingsCreated++;
         } else {
+          // MIGRATION SAFETY: Check if this booking is protected
+          if (SAFE_MODE && !existingBooking.migrationSafe && eventDate < MIGRATION_TIMESTAMP) {
+            bookingsProtected++;
+            console.log(`🛡️ PROTECTED: "${event.summary || 'No title'}" (before migration timestamp)`);
+            continue;
+          }
+
           // CHECK: Only update if event was actually modified
           const eventLastModified = new Date(event.updated);
           const bookingLastModified = new Date(existingBooking.updatedAt || existingBooking.createdAt);
 
           if (eventLastModified > bookingLastModified) {
             // UPDATE: Event was modified after booking
-            const bookingData = await createBookingFromCalendarEvent(event);
+            const bookingData = await createBookingFromCalendarEvent(event, calendarType);
+
+            // MIGRATION SAFETY: Preserve migration tracking on updates
+            const updateData = {
+              ...bookingData,
+              syncVersion: existingBooking.syncVersion || SYNC_VERSION,
+              migrationSafe: existingBooking.migrationSafe !== undefined ? existingBooking.migrationSafe : (eventDate >= MIGRATION_TIMESTAMP),
+              lastSyncUpdate: new Date()
+            };
 
             await Booking.updateOne(
               { calendarEventId: event.id },
-              { $set: bookingData }
+              { $set: updateData }
             );
 
             console.log(`📝 UPDATED booking (event modified): "${event.summary || 'No title'}" (${event.id})`);
@@ -139,8 +169,7 @@ export default async function handler(req, res) {
       }
     }
 
-    // HANDLE INDIVIDUAL EVENT DELETIONS
-    // Check if any database bookings have calendar events that no longer exist
+    // HANDLE INDIVIDUAL EVENT DELETIONS with migration safety
     let bookingsDeleted = 0;
 
     // Get all manual bookings (from admin calendar) that should exist
@@ -154,6 +183,12 @@ export default async function handler(req, res) {
     // Check each manual booking to see if its calendar event still exists
     for (const booking of manualBookings) {
       try {
+        // MIGRATION SAFETY: Only check deletions for migration-safe bookings
+        if (SAFE_MODE && !booking.migrationSafe) {
+          console.log(`🛡️ PROTECTED from deletion check: "${booking.customerName || 'No name'}" (pre-migration)`);
+          continue;
+        }
+
         // Try to fetch the specific event
         await calendar.events.get({
           calendarId,
@@ -162,17 +197,21 @@ export default async function handler(req, res) {
         // Event exists, no action needed
       } catch (eventError) {
         if (eventError.code === 404) {
-          // Event was deleted from calendar, delete the booking
-          await Booking.deleteOne({ _id: booking._id });
-          console.log(`🗑️ DELETED booking for removed event: "${booking.customerName || 'No name'}" (${booking.calendarEventId})`);
-          bookingsDeleted++;
+          // Event was deleted from calendar, delete the booking (only if migration-safe)
+          if (booking.migrationSafe || !SAFE_MODE) {
+            await Booking.deleteOne({ _id: booking._id });
+            console.log(`🗑️ DELETED booking for removed event: "${booking.customerName || 'No name'}" (${booking.calendarEventId})`);
+            bookingsDeleted++;
+          } else {
+            console.log(`🛡️ PROTECTED from deletion: "${booking.customerName || 'No name'}" (pre-migration)`);
+          }
         } else {
           console.error(`❌ Error checking event ${booking.calendarEventId}:`, eventError);
         }
       }
     }
 
-    const message = `Webhook: ${bookingsCreated} created, ${bookingsUpdated} updated, ${bookingsSkipped} skipped, ${bookingsDeleted} deleted`;
+    const message = `Webhook: ${bookingsCreated} created, ${bookingsUpdated} updated, ${bookingsSkipped} skipped, ${bookingsProtected} protected, ${bookingsDeleted} deleted`;
     console.log(`✅ ${message}`);
 
     res.status(200).json({
@@ -181,9 +220,13 @@ export default async function handler(req, res) {
       bookingsCreated,
       bookingsUpdated,
       bookingsSkipped,
+      bookingsProtected,
       bookingsDeleted,
       calendarType,
       resourceState,
+      migrationTimestamp: MIGRATION_TIMESTAMP.toISOString(),
+      safeMode: SAFE_MODE,
+      syncVersion: SYNC_VERSION,
       timeRange: `${oneDayAgo.toDateString()} to ${oneWeekFromNow.toDateString()}`
     });
   } catch (error) {
