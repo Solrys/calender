@@ -3,7 +3,7 @@
 import Stripe from "stripe";
 import dbConnect from "@/lib/dbConnect";
 import Booking from "@/models/Booking";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 import createCalendarEvent from "@/utils/calenderEvent";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -67,10 +67,11 @@ export default async function handler(req, res) {
       items = [],
     } = updatedBooking;
 
-    // SIMPLE FIX: Just use the date as-is, let Google Calendar handle the timezone
-    const formattedDate = format(new Date(startDate), "yyyy-MM-dd");
+    // FIX: Apply +1 day correction to match Google Calendar exactly (same as our fresh import fix)
+    const correctedDate = addDays(new Date(startDate), 1);
+    const formattedDate = format(correctedDate, "yyyy-MM-dd");
 
-    // Create DateTime strings without timezone conversion - just as user selected
+    // Create DateTime strings with corrected date
     const startDateTime = `${formattedDate}T${convertTo24Hour(startTime)}`;
     const endDateTime = `${formattedDate}T${convertTo24Hour(endTime)}`;
 
@@ -104,9 +105,15 @@ Estimated Total: $${estimatedTotal}`,
     try {
       const calendarEvent = await createCalendarEvent(eventData);
       console.log("✅ Google Calendar event created:", calendarEvent.id);
+
+      // ALSO UPDATE: Apply +1 day correction to database booking to match calendar
       await Booking.findByIdAndUpdate(bookingId, {
         calendarEventId: calendarEvent.id,
+        startDate: correctedDate,
+        syncVersion: 'v3.2-new-booking-corrected'
       });
+
+      console.log(`✅ Database booking date corrected: ${format(new Date(startDate), "yyyy-MM-dd")} → ${formattedDate}`);
     } catch (calendarError) {
       console.error(
         "❌ Failed to create Google Calendar event:",

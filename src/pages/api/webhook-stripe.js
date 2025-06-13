@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 import dbConnect from "@/lib/dbConnect";
 import Booking from "@/models/Booking";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 import createCalendarEvent from "@/utils/calenderEvent";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -92,9 +92,11 @@ export default async function handler(req, res) {
       // Only create calendar event if it doesn't already exist
       if (!updatedBooking.calendarEventId) {
         try {
-          const formattedDate = format(new Date(startDate), "yyyy-MM-dd");
+          // FIX: Apply +1 day correction to match Google Calendar exactly (same as verify-payment.js)
+          const correctedDate = addDays(new Date(startDate), 1);
+          const formattedDate = format(correctedDate, "yyyy-MM-dd");
 
-          // SIMPLE FIX: Just use the date as-is, let Google Calendar handle the timezone
+          // Create DateTime strings with corrected date
           const startDateTime = `${formattedDate}T${convertTo24Hour(startTime)}`;
           const endDateTime = `${formattedDate}T${convertTo24Hour(endTime)}`;
 
@@ -128,10 +130,14 @@ Estimated Total: $${estimatedTotal}`,
           const calendarEvent = await createCalendarEvent(eventData);
           console.log("✅ Google Calendar event created via webhook:", calendarEvent.id);
 
-          // Update booking with calendar event ID
+          // ALSO UPDATE: Apply +1 day correction to database booking to match calendar
           await Booking.findByIdAndUpdate(bookingId, {
             calendarEventId: calendarEvent.id,
+            startDate: correctedDate,
+            syncVersion: 'v3.2-new-booking-corrected'
           });
+
+          console.log(`✅ Database booking date corrected via webhook: ${format(new Date(startDate), "yyyy-MM-dd")} → ${formattedDate}`);
         } catch (calendarError) {
           console.error("❌ Failed to create Google Calendar event via webhook:", calendarError.message);
           // Don't fail the webhook if calendar creation fails
