@@ -94,19 +94,9 @@ export default async function handler(req, res) {
         try {
           const formattedDate = format(new Date(startDate), "yyyy-MM-dd");
 
-          // Use proper timezone handling instead of hardcoded offset
-          const timeZone = "America/Los_Angeles";
-          const startISO = new Date(
-            `${formattedDate}T${convertTo24Hour(startTime)}`
-          );
-          const endISO = new Date(
-            `${formattedDate}T${convertTo24Hour(endTime)}`
-          );
-
-          // Adjust for Eastern Time (handles EST/EDT automatically)
-          const options = { timeZone };
-          const startISOString = startISO.toLocaleString("sv-SE", options).replace(" ", "T") + ":00";
-          const endISOString = endISO.toLocaleString("sv-SE", options).replace(" ", "T") + ":00";
+          // SIMPLE FIX: Just use the date as-is, let Google Calendar handle the timezone
+          const startDateTime = `${formattedDate}T${convertTo24Hour(startTime)}`;
+          const endDateTime = `${formattedDate}T${convertTo24Hour(endTime)}`;
 
           const selectedAddons = items
             .filter((item) => item.quantity > 0)
@@ -125,8 +115,14 @@ End Time: ${endTime}${isEvent ? '\nEvent: Yes (Cleaning fee applied)' : '\nEvent
 Subtotal: $${subtotal}
 Studio Cost: $${studioCost}
 Estimated Total: $${estimatedTotal}`,
-            start: { dateTime: new Date(`${formattedDate}T${convertTo24Hour(startTime)}`).toISOString(), timeZone },
-            end: { dateTime: new Date(`${formattedDate}T${convertTo24Hour(endTime)}`).toISOString(), timeZone },
+            start: {
+              dateTime: startDateTime,
+              timeZone: "America/New_York"
+            },
+            end: {
+              dateTime: endDateTime,
+              timeZone: "America/New_York"
+            },
           };
 
           const calendarEvent = await createCalendarEvent(eventData);

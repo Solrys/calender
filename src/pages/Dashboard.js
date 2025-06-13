@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { format, parse } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -18,6 +19,26 @@ import {
 } from "@/components/ui/table";
 import { saveAs } from "file-saver";
 import AddonsDisplay from "@/components/Addon/AddonDisplay";
+
+// Timezone-neutral date formatting function
+const formatDateForDisplay = (dateString) => {
+  // Extract date from ISO string to avoid timezone conversion
+  const isoDate = new Date(dateString).toISOString();
+  const datePart = isoDate.split('T')[0]; // Gets "2025-07-28"
+  const [year, month, day] = datePart.split('-');
+
+  // Create a date in the local timezone with these exact values
+  const localDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+  return format(localDate, "MMM d, yyyy");
+};
+
+// Helper function for month/year filtering
+const getDatePartsForFilter = (dateString) => {
+  const isoDate = new Date(dateString).toISOString();
+  const datePart = isoDate.split('T')[0]; // Gets "2025-07-28"
+  const [year, month, day] = datePart.split('-');
+  return { year, month, day };
+};
 
 export default function BookingDashboard() {
   const [bookings, setBookings] = useState([]);
@@ -57,12 +78,12 @@ export default function BookingDashboard() {
 
     if (monthFilter) {
       filtered = filtered.filter(
-        (b) => format(new Date(b.startDate), "MM") === monthFilter
+        (b) => getDatePartsForFilter(b.startDate).month === monthFilter
       );
     }
     if (yearFilter) {
       filtered = filtered.filter(
-        (b) => format(new Date(b.startDate), "yyyy") === String(yearFilter)
+        (b) => getDatePartsForFilter(b.startDate).year === String(yearFilter)
       );
     }
 
@@ -107,20 +128,22 @@ export default function BookingDashboard() {
       const addOns =
         b.items && b.items.length > 0
           ? b.items
-              .filter((item) => item.quantity > 0)
-              .map((item) => `${item.name} (${item.quantity})`)
-              .join("; ")
+            .filter((item) => item.quantity > 0)
+            .map((item) => `${item.name} (${item.quantity})`)
+            .join("; ")
           : "None";
 
       let totalHours = "N/A";
       try {
+        const dateParts = getDatePartsForFilter(b.startDate);
+        const dateString = `${dateParts.year}-${dateParts.month.padStart(2, '0')}-${dateParts.day.padStart(2, '0')}`;
         const startDateTime = parse(
-          `${format(new Date(b.startDate), "yyyy-MM-dd")} ${b.startTime}`,
+          `${dateString} ${b.startTime}`,
           "yyyy-MM-dd h:mm a",
           new Date()
         );
         const endDateTime = parse(
-          `${format(new Date(b.startDate), "yyyy-MM-dd")} ${b.endTime}`,
+          `${dateString} ${b.endTime}`,
           "yyyy-MM-dd h:mm a",
           new Date()
         );
@@ -135,7 +158,7 @@ export default function BookingDashboard() {
         b.customerName
       },${b.customerPhone},${b.customerEmail},${b.studio},${
         b.paymentStatus
-      },${format(new Date(b.startDate), "MMM d, yyyy")},${b.startTime},${
+      },${formatDateForDisplay(b.startDate)},${b.startTime},${
         b.endTime
       },${b.subtotal},${b.estimatedTotal},${addOns},${totalHours}`;
     });
@@ -290,17 +313,15 @@ export default function BookingDashboard() {
               filteredBookings.map((booking) => {
                 let totalHours = "N/A";
                 try {
+                  const dateParts = getDatePartsForFilter(booking.startDate);
+                  const dateString = `${dateParts.year}-${dateParts.month.padStart(2, '0')}-${dateParts.day.padStart(2, '0')}`;
                   const startDateTime = parse(
-                    `${format(new Date(booking.startDate), "yyyy-MM-dd")} ${
-                      booking.startTime
-                    }`,
+                    `${dateString} ${booking.startTime}`,
                     "yyyy-MM-dd h:mm a",
                     new Date()
                   );
                   const endDateTime = parse(
-                    `${format(new Date(booking.startDate), "yyyy-MM-dd")} ${
-                      booking.endTime
-                    }`,
+                    `${formatInTimeZone(new Date(booking.startDate), "America/New_York", "yyyy-MM-dd")} ${booking.endTime}`,
                     "yyyy-MM-dd h:mm a",
                     new Date()
                   );
@@ -326,7 +347,7 @@ export default function BookingDashboard() {
                     <TableCell>{booking.studio}</TableCell>
                     <TableCell>{booking.paymentStatus}</TableCell>
                     <TableCell>
-                      {format(new Date(booking.startDate), "MMM d, yyyy")}
+                      {formatDateForDisplay(booking.startDate)}
                     </TableCell>
                     <TableCell>{booking.startTime}</TableCell>
                     <TableCell>{booking.endTime}</TableCell>

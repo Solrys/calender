@@ -67,13 +67,12 @@ export default async function handler(req, res) {
       items = [],
     } = updatedBooking;
 
+    // SIMPLE FIX: Just use the date as-is, let Google Calendar handle the timezone
     const formattedDate = format(new Date(startDate), "yyyy-MM-dd");
-    const startISO = new Date(
-      `${formattedDate}T${convertTo24Hour(startTime)}-04:00`
-    ).toISOString();
-    const endISO = new Date(
-      `${formattedDate}T${convertTo24Hour(endTime)}-04:00`
-    ).toISOString();
+
+    // Create DateTime strings without timezone conversion - just as user selected
+    const startDateTime = `${formattedDate}T${convertTo24Hour(startTime)}`;
+    const endDateTime = `${formattedDate}T${convertTo24Hour(endTime)}`;
 
     const selectedAddons = items
       .filter((item) => item.quantity > 0)
@@ -92,8 +91,14 @@ End Time: ${endTime}${updatedBooking.event ? '\nEvent: Yes (Cleaning fee applied
 Subtotal: $${subtotal}
 Studio Cost: $${studioCost}
 Estimated Total: $${estimatedTotal}`,
-      start: { dateTime: startISO, timeZone: "America/Los_Angeles" },
-      end: { dateTime: endISO, timeZone: "America/Los_Angeles" },
+      start: {
+        dateTime: startDateTime,
+        timeZone: "America/New_York"
+      },
+      end: {
+        dateTime: endDateTime,
+        timeZone: "America/New_York"
+      },
     };
 
     try {

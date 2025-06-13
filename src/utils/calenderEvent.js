@@ -30,12 +30,12 @@ async function createCalendarEvent(eventData) {
     // Manual bookings are created directly in Manual Booking Calendar by admin
     const calendarId = process.env.GOOGLE_CALENDAR_ID_WEBSITE;
 
-    // UPDATED: Ensure timezone is Pacific Time for LA client
+    // UPDATED: Ensure timezone is Eastern Time for LA client
     if (eventData.start && eventData.start.dateTime) {
-      eventData.start.timeZone = "America/Los_Angeles";
+      eventData.start.timeZone = "America/New_York";
     }
     if (eventData.end && eventData.end.dateTime) {
-      eventData.end.timeZone = "America/Los_Angeles";
+      eventData.end.timeZone = "America/New_York";
     }
 
     const response = await calendar.events.insert({

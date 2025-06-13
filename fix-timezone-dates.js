@@ -116,12 +116,12 @@ function fixBookingDate(booking, calendarEvent) {
     // Get the original calendar event's start time
     const startUtc = new Date(calendarEvent.start.dateTime || calendarEvent.start.date);
 
-    // Build the correct local date string in ET
-    const localDateString = formatInTimeZone(startUtc, timeZone, "yyyy-MM-dd");
+    // SIMPLE FIX: Just get the date in Eastern Time and store it simply (matching our new approach)
+    const easternDateString = formatInTimeZone(startUtc, timeZone, "yyyy-MM-dd");
 
-    // Create a timezone-neutral date (same fix as in calendar-sync.js)
-    const [year, month, day] = localDateString.split("-").map(Number);
-    const correctedStartDate = new Date(year, month - 1, day, 12, 0, 0); // Use noon to avoid daylight saving issues
+    // Create a simple date object for the Eastern date - no complex timezone conversion
+    const [year, month, day] = easternDateString.split("-").map(Number);
+    const correctedStartDate = new Date(year, month - 1, day);
 
     return correctedStartDate;
 }

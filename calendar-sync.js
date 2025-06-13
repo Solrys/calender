@@ -11,7 +11,7 @@ const { formatInTimeZone } = require('date-fns-tz');
 
 // MIGRATION SETTINGS - Change these to control the migration
 const MIGRATION_TIMESTAMP = new Date('2024-06-13T00:00:00Z'); // Only affect events after this date
-const SYNC_VERSION = 'v2.0-pacific-timezone'; // Version tag for tracking
+const SYNC_VERSION = 'v2.1-eastern-timezone'; // Version tag for tracking
 const SAFE_MODE = true; // Set to false only when you're confident
 
 // Load environment variables manually
@@ -107,8 +107,8 @@ async function initializeGoogleCalendar() {
   }
 }
 
-// Helper: Convert time to 12-hour format - UPDATED for Pacific Time
-function convertTimeTo12Hour(date, timeZone = "America/Los_Angeles") {
+// Helper: Convert time to 12-hour format - UPDATED for Eastern Time
+function convertTimeTo12Hour(date, timeZone = "America/New_York") {
   return formatInTimeZone(date, timeZone, "h:mm a");
 }
 
@@ -196,23 +196,18 @@ function parseEventDetails(description) {
 
 // SAFE Convert calendar event to booking data - ENHANCED with migration safety
 function createBookingFromCalendarEvent(event, calendarType = "Manual Booking Calendar", isMigration = false) {
-  const timeZone = "America/Los_Angeles"; // UPDATED: Pacific Time for LA client
+  const timeZone = "America/New_York"; // UPDATED: Eastern Time to match calendar
 
   // Parse the UTC instants from the event
   const startUtc = new Date(event.start.dateTime || event.start.date);
   const endUtc = new Date(event.end.dateTime || event.end.date);
 
-  // TIMEZONE FIX: Build a timezone-neutral date (no midnight UTC conversion)
-  // This prevents the 1-day shift issue for users in different timezones
-  const localDateString = formatInTimeZone(startUtc, timeZone, "yyyy-MM-dd");
+  // SIMPLE FIX: Just get the date in Eastern Time and store it simply
+  const easternDateString = formatInTimeZone(startUtc, timeZone, "yyyy-MM-dd");
 
-  // Create a date that represents the booking date without timezone shifts
-  // Using the local date but in the user's timezone, not forcing UTC midnight
-  const [year, month, day] = localDateString.split("-").map(Number);
-
-  // CRITICAL FIX: Create date in local timezone instead of UTC to prevent shifts
-  // This ensures the date displays correctly for all users regardless of their timezone
-  const startDate = new Date(year, month - 1, day, 12, 0, 0); // Use noon to avoid daylight saving issues
+  // Create a simple date object for the Eastern date - no complex timezone conversion
+  const [year, month, day] = easternDateString.split("-").map(Number);
+  const startDate = new Date(year, month - 1, day);
 
   // Format the times for display
   const startTime = convertTimeTo12Hour(startUtc, timeZone);
