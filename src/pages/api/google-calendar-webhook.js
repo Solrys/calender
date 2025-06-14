@@ -72,6 +72,16 @@ export default async function handler(req, res) {
     webhookProcessingCache.set(webhookKey, webhookNow);
     console.log(`🔄 Processing webhook: ${webhookKey} (not rate limited)`);
 
+    // ADDITIONAL SAFETY: Check if we're already processing this exact webhook
+    const processingKey = `processing_${webhookKey}`;
+    if (webhookProcessingCache.has(processingKey)) {
+      console.log(`🚫 ALREADY PROCESSING: Webhook ${webhookKey} is currently being processed`);
+      return res.status(200).json({ message: "Webhook already being processed" });
+    }
+
+    // Mark as currently processing
+    webhookProcessingCache.set(processingKey, webhookNow);
+
     // Authenticate using the service account
     const auth = new google.auth.GoogleAuth({
       credentials: serviceAccount,
@@ -274,6 +284,10 @@ export default async function handler(req, res) {
     const message = `Webhook: ${bookingsCreated} created, ${bookingsUpdated} updated, ${bookingsSkipped} skipped, ${bookingsProtected} protected, ${bookingsDeleted} deleted`;
     console.log(`✅ ${message}`);
 
+    // Clean up processing flag
+    const cleanupProcessingKey = `processing_${resourceId}_${resourceState}`;
+    webhookProcessingCache.delete(cleanupProcessingKey);
+
     res.status(200).json({
       message,
       eventsProcessed: events.length,
@@ -291,6 +305,11 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     console.error("❌ Error in calendar webhook:", error);
+
+    // Clean up processing flag on error
+    const errorProcessingKey = `processing_${req.headers['x-goog-resource-id']}_${req.headers['x-goog-resource-state']}`;
+    webhookProcessingCache.delete(errorProcessingKey);
+
     res
       .status(500)
       .json({ message: "Error processing calendar webhook", error: error.message });
