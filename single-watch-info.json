@@ -1,0 +1,8 @@
+{
+  "channelId": "single-calendar-watch-1749884162194",
+  "resourceId": "oes72uD2wotMPiDdpnYrLXI9u3U",
+  "expiration": "1749970563000",
+  "registeredAt": "2025-06-14T06:56:03.316Z",
+  "webhookUrl": "https://booking.bookthespace.com/api/google-calendar-webhook",
+  "note": "Single watch registered after clearing duplicates"
+}

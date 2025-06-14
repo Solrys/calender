@@ -250,6 +250,42 @@ export default async function handler(req, res) {
 
         console.log(`   📋 Booking data: ${bookingData.customerName || 'No name'} - ${bookingData.studio} - ${bookingData.startTime} to ${bookingData.endTime}`);
 
+        // LOGICAL DUPLICATE CHECK: Check if a similar booking already exists
+        // This prevents multiple bookings when Google Calendar creates multiple events for same logical booking
+        const logicalDuplicateCheck = await Booking.findOne({
+          startDate: new Date(bookingData.startDate),
+          customerName: bookingData.customerName,
+          customerEmail: bookingData.customerEmail,
+          studio: bookingData.studio,
+          createdAt: { $gte: new Date(now - 30 * 60 * 1000) } // Only check bookings created in last 30 minutes
+        });
+
+        if (logicalDuplicateCheck) {
+          console.log(`   ⚠️ LOGICAL DUPLICATE DETECTED: Similar booking already exists`);
+          console.log(`      Existing: ${logicalDuplicateCheck.startTime} - ${logicalDuplicateCheck.endTime} (Event: ${logicalDuplicateCheck.calendarEventId})`);
+          console.log(`      New: ${bookingData.startTime} - ${bookingData.endTime} (Event: ${event.id})`);
+
+          // Compare times to see which one is more accurate
+          const existingStartTime = logicalDuplicateCheck.startTime;
+          const newStartTime = bookingData.startTime;
+
+          // If the new booking has a different time, it might be an update
+          if (existingStartTime !== newStartTime) {
+            console.log(`   🔄 TIME DIFFERENCE DETECTED - This might be an event update`);
+            console.log(`      Keeping the more recent event and removing the old one`);
+
+            // Delete the old booking and create the new one (this handles event updates)
+            await Booking.findByIdAndDelete(logicalDuplicateCheck._id);
+            console.log(`   🗑️ Deleted old booking: ${logicalDuplicateCheck._id}`);
+          } else {
+            // Same time, just skip
+            console.log(`   ⏭️ Same time detected - skipping duplicate`);
+            bookingsSkipped++;
+            eventProcessingCache.set(eventKey, now);
+            continue;
+          }
+        }
+
         // Add enhanced tracking with unique identifiers
         const enhancedBookingData = {
           ...bookingData,
