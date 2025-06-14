@@ -137,24 +137,34 @@ export default async function handler(req, res) {
     const calendarId = process.env.GOOGLE_CALENDAR_ID;
     const calendarType = "Manual Booking Calendar";
 
-    // Get recently updated events
-    const oneDayAgo = new Date(now - 24 * 60 * 60 * 1000);
+    // FIXED: Only get the most recently updated events (last 10 minutes) instead of 24 hours
+    const tenMinutesAgo = new Date(now - 10 * 60 * 1000); // Only last 10 minutes
 
     let events = [];
     try {
-      console.log(`📅 Fetching events updated since ${oneDayAgo.toISOString()}`);
+      console.log(`📅 Fetching events updated since ${tenMinutesAgo.toISOString()} (last 10 minutes only)`);
 
       const recentRes = await calendar.events.list({
         calendarId,
-        updatedMin: oneDayAgo.toISOString(),
+        updatedMin: tenMinutesAgo.toISOString(),
         singleEvents: true,
         orderBy: "updated",
-        maxResults: 25, // Reduced further for efficiency
+        maxResults: 5, // Only get the 5 most recent events
         timeZone: 'America/New_York'
       });
 
       events = recentRes.data.items || [];
-      console.log(`📅 Found ${events.length} recently updated events`);
+      console.log(`📅 Found ${events.length} recently updated events (last 10 minutes)`);
+
+      // ADDITIONAL FILTER: Only process events that were actually created/updated recently
+      const veryRecentEvents = events.filter(event => {
+        const eventUpdated = new Date(event.updated);
+        const timeSinceUpdate = now - eventUpdated.getTime();
+        return timeSinceUpdate < 15 * 60 * 1000; // Only events updated in last 15 minutes
+      });
+
+      console.log(`📅 Filtered to ${veryRecentEvents.length} very recent events`);
+      events = veryRecentEvents;
 
     } catch (calendarError) {
       console.error("❌ Error fetching calendar events:", calendarError);
@@ -167,7 +177,7 @@ export default async function handler(req, res) {
     let htmlCleaned = 0;
     let errors = [];
 
-    // Process each event with FIXED duplicate protection
+    // Process each event with ENHANCED duplicate protection
     for (const event of events) {
       try {
         // Skip all-day events and events without proper time
@@ -176,24 +186,29 @@ export default async function handler(req, res) {
           continue;
         }
 
-        // EVENT-LEVEL RATE LIMITING: Prevent processing same event multiple times
+        // ENHANCED UNIQUE IDENTIFIER TRACKING
         const eventKey = `event_${event.id}`;
+        const eventUniqueKey = `${event.id}_${event.updated}`; // Include updated timestamp for uniqueness
+
+        console.log(`\n🔍 Processing event: ${event.summary} (${event.id})`);
+        console.log(`   📅 Start: ${event.start.dateTime}`);
+        console.log(`   📅 End: ${event.end?.dateTime}`);
+        console.log(`   🕐 Updated: ${event.updated}`);
+        console.log(`   🔑 Unique Key: ${eventUniqueKey}`);
+
+        // STRICT EVENT-LEVEL RATE LIMITING: Prevent processing same event multiple times
         if (eventProcessingCache.has(eventKey)) {
           const lastEventProcessed = eventProcessingCache.get(eventKey);
           const timeSinceEventProcessed = now - lastEventProcessed;
 
           if (timeSinceEventProcessed < EVENT_COOLDOWN_MS) {
-            console.log(`🚫 EVENT RATE LIMITED: ${event.id} processed ${timeSinceEventProcessed}ms ago`);
+            console.log(`   🚫 EVENT RATE LIMITED: ${event.id} processed ${timeSinceEventProcessed}ms ago`);
             bookingsSkipped++;
             continue;
           }
         }
 
-        console.log(`\n🔍 Processing event: ${event.summary} (${event.id})`);
-        console.log(`   📅 Start: ${event.start.dateTime}`);
-        console.log(`   📅 End: ${event.end?.dateTime}`);
-
-        // COMPREHENSIVE DUPLICATE CHECK - FIXED
+        // COMPREHENSIVE DUPLICATE CHECK - Check by calendar event ID
         const existingBookings = await Booking.find({ calendarEventId: event.id });
 
         if (existingBookings.length > 0) {
@@ -219,26 +234,36 @@ export default async function handler(req, res) {
           continue;
         }
 
-        // Create booking using the NEW MANUAL CALENDAR FUNCTION for proper timezone handling
+        // ADDITIONAL CHECK: Skip if event is too old (created more than 1 hour ago)
+        const eventCreated = new Date(event.created);
+        const timeSinceCreated = now - eventCreated.getTime();
+        if (timeSinceCreated > 60 * 60 * 1000) { // 1 hour
+          console.log(`   ⏭️ Skipping old event: Created ${Math.round(timeSinceCreated / (60 * 1000))} minutes ago`);
+          continue;
+        }
+
+        // Create booking using the FIXED MANUAL CALENDAR FUNCTION
         console.log(`   ✅ Creating new booking for event ${event.id} using MANUAL HANDLER`);
 
-        // Use the new manual calendar event handler instead of the original function
+        // Use the new manual calendar event handler for proper timezone handling
         const bookingData = await createBookingFromManualCalendarEvent(event, calendarType);
 
-        // The new function already cleans HTML, so no need to clean again
-        console.log(`   📋 Booking data from manual handler: ${bookingData.customerName || 'No name'} - ${bookingData.studio} - ${bookingData.startTime} to ${bookingData.endTime}`);
+        console.log(`   📋 Booking data: ${bookingData.customerName || 'No name'} - ${bookingData.studio} - ${bookingData.startTime} to ${bookingData.endTime}`);
 
-        // Add enhanced tracking without overriding the core data
+        // Add enhanced tracking with unique identifiers
         const enhancedBookingData = {
           ...bookingData,
           calendarEventId: event.id,
+          calendarEventUpdated: event.updated,
+          calendarEventCreated: event.created,
           syncVersion: SYNC_VERSION,
           migrationSafe: new Date(event.start.dateTime) >= MIGRATION_TIMESTAMP,
           lastSyncUpdate: new Date(),
-          webhookProcessed: true
+          webhookProcessed: true,
+          webhookUniqueKey: eventUniqueKey
         };
 
-        // Final duplicate check before creation
+        // FINAL RACE CONDITION CHECK before creation
         const finalCheck = await Booking.findOne({ calendarEventId: event.id });
         if (finalCheck) {
           console.log(`   ⚠️ RACE CONDITION PREVENTED: Booking created during processing`);
@@ -250,6 +275,7 @@ export default async function handler(req, res) {
         const newBooking = await Booking.create(enhancedBookingData);
         console.log(`   ✅ CREATED: ${newBooking.customerName || 'No name'} - ${newBooking.startTime} to ${newBooking.endTime}`);
         console.log(`      Database ID: ${newBooking._id}`);
+        console.log(`      Calendar Event ID: ${newBooking.calendarEventId}`);
         bookingsCreated++;
         eventProcessingCache.set(eventKey, now); // Mark event as processed
 

@@ -2,7 +2,7 @@ import { google } from "googleapis";
 import dbConnect from "@/lib/dbConnect";
 import Booking from "@/models/Booking";
 import { createBookingFromCalendarEvent } from "@/utils/createBookingFromEvent";
-import { WebhookDuplicatePrevention, cleanHTMLFromText } from "../webhook-duplicate-prevention";
+import { WebhookDuplicatePrevention, cleanHTMLFromText } from "./webhook-duplicate-prevention";
 
 // MIGRATION SAFETY SETTINGS
 const MIGRATION_TIMESTAMP = new Date('2024-06-13T00:00:00Z');
