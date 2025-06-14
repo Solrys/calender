@@ -2,10 +2,11 @@ import { google } from "googleapis";
 import dbConnect from "@/lib/dbConnect";
 import Booking from "@/models/Booking";
 import { createBookingFromCalendarEvent } from "@/utils/createBookingFromEvent";
+import { createBookingFromManualCalendarEvent } from "@/utils/manualCalendarEventHandler";
 
 // MIGRATION SAFETY SETTINGS - Must match calendar-sync.js
 const MIGRATION_TIMESTAMP = new Date('2024-06-13T00:00:00Z');
-const SYNC_VERSION = 'v2.3-fixed-webhook';
+const SYNC_VERSION = 'v2.4-manual-calendar-fix';
 const SAFE_MODE = true;
 
 // ENHANCED WEBHOOK RATE LIMITING with event-specific tracking
@@ -218,28 +219,14 @@ export default async function handler(req, res) {
           continue;
         }
 
-        // Create booking using the existing function (don't override it)
-        console.log(`   ✅ Creating new booking for event ${event.id}`);
-        const bookingData = await createBookingFromCalendarEvent(event, calendarType);
+        // Create booking using the NEW MANUAL CALENDAR FUNCTION for proper timezone handling
+        console.log(`   ✅ Creating new booking for event ${event.id} using MANUAL HANDLER`);
 
-        // CLEAN HTML from customer data before saving
-        if (bookingData.customerName) {
-          const originalName = bookingData.customerName;
-          bookingData.customerName = cleanHTMLFromText(originalName);
+        // Use the new manual calendar event handler instead of the original function
+        const bookingData = await createBookingFromManualCalendarEvent(event, calendarType);
 
-          if (originalName !== bookingData.customerName) {
-            console.log(`   🧹 Cleaned HTML from new booking: "${originalName}" → "${bookingData.customerName}"`);
-            htmlCleaned++;
-          }
-        }
-
-        if (bookingData.customerEmail) {
-          bookingData.customerEmail = cleanHTMLFromText(bookingData.customerEmail);
-        }
-
-        if (bookingData.customerPhone) {
-          bookingData.customerPhone = cleanHTMLFromText(bookingData.customerPhone);
-        }
+        // The new function already cleans HTML, so no need to clean again
+        console.log(`   📋 Booking data from manual handler: ${bookingData.customerName || 'No name'} - ${bookingData.studio} - ${bookingData.startTime} to ${bookingData.endTime}`);
 
         // Add enhanced tracking without overriding the core data
         const enhancedBookingData = {
