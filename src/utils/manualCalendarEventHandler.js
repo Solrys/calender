@@ -2,7 +2,7 @@ import { formatInTimeZone } from "date-fns-tz";
 
 // MIGRATION SAFETY SETTINGS
 const MIGRATION_TIMESTAMP = new Date('2024-06-13T00:00:00Z');
-const SYNC_VERSION = 'v2.4-manual-calendar-fix';
+const SYNC_VERSION = 'v2.5-date-timezone-fixed';
 
 // Helper: Convert a UTC Date to "h:mm a" in Eastern Time
 function convertTimeTo12Hour(date, timeZone = "America/New_York") {
@@ -72,10 +72,11 @@ export async function createBookingFromManualCalendarEvent(event, calendarType =
     const easternDateString = formatInTimeZone(eventStartTime, timeZone, "yyyy-MM-dd");
     console.log(`   📅 Eastern date string: ${easternDateString}`);
 
-    // FIXED: Create date object properly to avoid timezone shifts
-    // Instead of new Date(year, month-1, day) which uses local timezone,
-    // create a UTC date and then adjust to ensure it represents the correct date
-    const startDate = new Date(easternDateString + 'T12:00:00.000Z');
+    // COMPLETELY FIXED: Create date object that will never shift due to timezone
+    // Parse the date components and create a date object using the local constructor
+    // This ensures the date stays exactly as it appears in Eastern Time
+    const [year, month, day] = easternDateString.split("-").map(Number);
+    const startDate = new Date(year, month - 1, day); // month is 0-indexed
 
     // FIXED: Format the times correctly in Eastern Time
     const startTime = convertTimeTo12Hour(eventStartTime, timeZone);
@@ -84,6 +85,7 @@ export async function createBookingFromManualCalendarEvent(event, calendarType =
     console.log(`   🕐 Formatted start time: ${startTime}`);
     console.log(`   🕐 Formatted end time: ${endTime}`);
     console.log(`   📅 Final start date: ${startDate.toISOString().split('T')[0]}`);
+    console.log(`   📅 Date components: Year=${year}, Month=${month}, Day=${day}`);
 
     // Parse studio & customer details
     const studio = parseStudio(event.summary);

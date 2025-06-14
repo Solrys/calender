@@ -6,7 +6,7 @@ import { createBookingFromManualCalendarEvent } from "@/utils/manualCalendarEven
 
 // MIGRATION SAFETY SETTINGS - Must match calendar-sync.js
 const MIGRATION_TIMESTAMP = new Date('2024-06-13T00:00:00Z');
-const SYNC_VERSION = 'v2.4-manual-calendar-fix';
+const SYNC_VERSION = 'v2.5-date-timezone-fixed';
 const SAFE_MODE = true;
 
 // ENHANCED WEBHOOK RATE LIMITING with event-specific tracking
