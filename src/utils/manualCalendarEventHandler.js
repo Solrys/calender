@@ -72,9 +72,10 @@ export async function createBookingFromManualCalendarEvent(event, calendarType =
     const easternDateString = formatInTimeZone(eventStartTime, timeZone, "yyyy-MM-dd");
     console.log(`   📅 Eastern date string: ${easternDateString}`);
 
-    // Create a simple date object for the Eastern date
-    const [year, month, day] = easternDateString.split("-").map(Number);
-    const startDate = new Date(year, month - 1, day);
+    // FIXED: Create date object properly to avoid timezone shifts
+    // Instead of new Date(year, month-1, day) which uses local timezone,
+    // create a UTC date and then adjust to ensure it represents the correct date
+    const startDate = new Date(easternDateString + 'T12:00:00.000Z');
 
     // FIXED: Format the times correctly in Eastern Time
     const startTime = convertTimeTo12Hour(eventStartTime, timeZone);
@@ -82,6 +83,7 @@ export async function createBookingFromManualCalendarEvent(event, calendarType =
 
     console.log(`   🕐 Formatted start time: ${startTime}`);
     console.log(`   🕐 Formatted end time: ${endTime}`);
+    console.log(`   📅 Final start date: ${startDate.toISOString().split('T')[0]}`);
 
     // Parse studio & customer details
     const studio = parseStudio(event.summary);
