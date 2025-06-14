@@ -4,25 +4,51 @@ import Booking from "@/models/Booking";
 import { createBookingFromCalendarEvent } from "@/utils/createBookingFromEvent";
 
 // MIGRATION SAFETY SETTINGS - Must match calendar-sync.js
-const MIGRATION_TIMESTAMP = new Date('2024-06-13T00:00:00Z'); // Only affect events after this date
-const SYNC_VERSION = 'v2.0-pacific-timezone'; // Version tag for tracking
-const SAFE_MODE = true; // Set to false only when you're confident
+const MIGRATION_TIMESTAMP = new Date('2024-06-13T00:00:00Z');
+const SYNC_VERSION = 'v2.3-fixed-webhook';
+const SAFE_MODE = true;
 
-// WEBHOOK RATE LIMITING: Simple in-memory cache to prevent duplicate processing
+// ENHANCED WEBHOOK RATE LIMITING with event-specific tracking
 const webhookProcessingCache = new Map();
-const WEBHOOK_COOLDOWN_MS = 5000; // 5 seconds cooldown between processing same webhook
+const eventProcessingCache = new Map(); // NEW: Track individual events
+const WEBHOOK_COOLDOWN_MS = 15000; // Increased to 15 seconds
+const EVENT_COOLDOWN_MS = 30000; // 30 seconds for individual events
+const PROCESSING_TIMEOUT_MS = 45000; // 45 seconds max processing time
 
 // Clean up old entries from cache periodically
 setInterval(() => {
   const now = Date.now();
   for (const [key, timestamp] of webhookProcessingCache.entries()) {
-    if (now - timestamp > WEBHOOK_COOLDOWN_MS) {
+    if (now - timestamp > Math.max(WEBHOOK_COOLDOWN_MS, PROCESSING_TIMEOUT_MS)) {
       webhookProcessingCache.delete(key);
     }
   }
-}, 30000); // Clean up every 30 seconds
+  for (const [key, timestamp] of eventProcessingCache.entries()) {
+    if (now - timestamp > EVENT_COOLDOWN_MS) {
+      eventProcessingCache.delete(key);
+    }
+  }
+}, 60000); // Clean up every minute
 
-// Clean up and parse the service account JSON from the environment variable
+// HTML cleanup utility
+function cleanHTMLFromText(text) {
+  if (!text) return "";
+
+  // Remove HTML tags
+  text = text.replace(/<[^>]*>/g, '');
+
+  // Decode common HTML entities
+  text = text.replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ');
+
+  return text.trim();
+}
+
+// Clean up and parse the service account JSON
 let serviceAccountKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
 if (
   (serviceAccountKey.startsWith('"') && serviceAccountKey.endsWith('"')) ||
@@ -40,27 +66,44 @@ export default async function handler(req, res) {
   }
 
   try {
-    console.log("🔔 Received Google Calendar push notification");
-    console.log(`🛡️ SAFE MODE: ${SAFE_MODE ? 'ENABLED' : 'DISABLED'}`);
-    console.log(`📅 Migration Timestamp: ${MIGRATION_TIMESTAMP.toISOString()}`);
+    console.log("🔔 Received Google Calendar push notification (FIXED)");
 
-    // Get webhook headers to understand what changed
+    // Get webhook headers
     const resourceId = req.headers['x-goog-resource-id'];
     const resourceState = req.headers['x-goog-resource-state'];
     const channelId = req.headers['x-goog-channel-id'];
 
     console.log(`📋 Webhook Details: State=${resourceState}, Resource=${resourceId}, Channel=${channelId}`);
 
-    // RATE LIMITING: Prevent rapid duplicate webhook calls
-    const webhookKey = `${resourceId}_${resourceState}`;
-    const webhookNow = Date.now();
+    // ENHANCED RATE LIMITING: Use multiple factors for webhook deduplication
+    const webhookKey = `${resourceId}_${resourceState}_${channelId}`;
+    const processingKey = `processing_${webhookKey}`;
+    const now = Date.now();
 
+    // Check if we're currently processing this webhook
+    if (webhookProcessingCache.has(processingKey)) {
+      const processingStartTime = webhookProcessingCache.get(processingKey);
+      const processingDuration = now - processingStartTime;
+
+      if (processingDuration < PROCESSING_TIMEOUT_MS) {
+        console.log(`🚫 ALREADY PROCESSING: Webhook ${webhookKey} started ${processingDuration}ms ago`);
+        return res.status(200).json({
+          message: "Webhook already being processed",
+          processingDuration
+        });
+      } else {
+        console.log(`⚠️ PROCESSING TIMEOUT: Cleaning up stale processing flag for ${webhookKey}`);
+        webhookProcessingCache.delete(processingKey);
+      }
+    }
+
+    // Check recent processing history
     if (webhookProcessingCache.has(webhookKey)) {
       const lastProcessed = webhookProcessingCache.get(webhookKey);
-      const timeSinceLastProcessed = webhookNow - lastProcessed;
+      const timeSinceLastProcessed = now - lastProcessed;
 
       if (timeSinceLastProcessed < WEBHOOK_COOLDOWN_MS) {
-        console.log(`🚫 RATE LIMITED: Webhook ${webhookKey} processed ${timeSinceLastProcessed}ms ago (cooldown: ${WEBHOOK_COOLDOWN_MS}ms)`);
+        console.log(`🚫 RATE LIMITED: Webhook ${webhookKey} processed ${timeSinceLastProcessed}ms ago`);
         return res.status(200).json({
           message: "Webhook rate limited",
           cooldownRemaining: WEBHOOK_COOLDOWN_MS - timeSinceLastProcessed
@@ -68,250 +111,199 @@ export default async function handler(req, res) {
       }
     }
 
-    // Mark this webhook as being processed
-    webhookProcessingCache.set(webhookKey, webhookNow);
-    console.log(`🔄 Processing webhook: ${webhookKey} (not rate limited)`);
+    // Mark as currently processing
+    webhookProcessingCache.set(processingKey, now);
+    console.log(`🔄 Processing webhook: ${webhookKey}`);
 
-    // ADDITIONAL SAFETY: Check if we're already processing this exact webhook
-    const processingKey = `processing_${webhookKey}`;
-    if (webhookProcessingCache.has(processingKey)) {
-      console.log(`🚫 ALREADY PROCESSING: Webhook ${webhookKey} is currently being processed`);
-      return res.status(200).json({ message: "Webhook already being processed" });
+    // Add processing delay to handle rapid webhook calls
+    await new Promise(resolve => setTimeout(resolve, 3000)); // Increased to 3 seconds
+
+    // Handle sync notifications
+    if (resourceState === 'sync') {
+      console.log("🔄 Initial sync notification - no action needed");
+      webhookProcessingCache.delete(processingKey);
+      webhookProcessingCache.set(webhookKey, now);
+      return res.status(200).json({ message: "Sync notification received" });
     }
 
-    // Mark as currently processing
-    webhookProcessingCache.set(processingKey, webhookNow);
-
-    // Authenticate using the service account
+    // Authenticate with Google Calendar
     const auth = new google.auth.GoogleAuth({
       credentials: serviceAccount,
       scopes: ["https://www.googleapis.com/auth/calendar"],
     });
 
-    const calendar = google.calendar({
-      version: "v3",
-      auth,
-    });
-
-    // Determine which calendar triggered the webhook
-    const manualCalendarId = process.env.GOOGLE_CALENDAR_ID; // Manual Booking Calendar
-    const websiteCalendarId = process.env.GOOGLE_CALENDAR_ID_WEBSITE; // Website Booking Calendar
-
-    // For now, we'll process the manual calendar (where admin creates events)
-    // Website calendar events are created by the system, so we don't need to sync them back
-    const calendarId = manualCalendarId;
+    const calendar = google.calendar({ version: "v3", auth });
+    const calendarId = process.env.GOOGLE_CALENDAR_ID;
     const calendarType = "Manual Booking Calendar";
 
-    console.log(`📅 Processing webhook for ${calendarType}`);
-
-    // WEBHOOK SPAM PROTECTION: Add delay for processing
-    await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay
-
-    // Handle different webhook states
-    if (resourceState === 'sync') {
-      console.log("🔄 Initial sync notification - no action needed");
-      return res.status(200).json({ message: "Sync notification received" });
-    }
-
-    // For exists/not_exists states, we need to check what actually changed
-    // EFFICIENT APPROACH: First try to get recently updated events
-    const now = new Date();
-    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000); // Last 24 hours
-
-    console.log(`📅 Checking for events updated since ${oneDayAgo.toDateString()}`);
+    // Get recently updated events
+    const oneDayAgo = new Date(now - 24 * 60 * 60 * 1000);
 
     let events = [];
     try {
-      // First, try to get recently updated events (more efficient)
+      console.log(`📅 Fetching events updated since ${oneDayAgo.toISOString()}`);
+
       const recentRes = await calendar.events.list({
         calendarId,
         updatedMin: oneDayAgo.toISOString(),
         singleEvents: true,
         orderBy: "updated",
-        maxResults: 100
+        maxResults: 25, // Reduced further for efficiency
+        timeZone: 'America/New_York'
       });
 
-      const recentEvents = recentRes.data.items || [];
-      console.log(`📅 Found ${recentEvents.length} recently updated events`);
+      events = recentRes.data.items || [];
+      console.log(`📅 Found ${events.length} recently updated events`);
 
-      // If we found recent events, use those
-      if (recentEvents.length > 0) {
-        events = recentEvents;
-      } else {
-        // Fallback: Check a broader range for new events
-        const sixMonthsFromNow = new Date(now.getTime() + 6 * 30 * 24 * 60 * 60 * 1000);
-        console.log(`📅 Fallback: Checking events from ${oneDayAgo.toDateString()} to ${sixMonthsFromNow.toDateString()}`);
-
-        const calendarRes = await calendar.events.list({
-          calendarId,
-          timeMin: oneDayAgo.toISOString(),
-          timeMax: sixMonthsFromNow.toISOString(),
-          singleEvents: true,
-          orderBy: "startTime",
-          maxResults: 500
-        });
-        events = calendarRes.data.items || [];
-      }
     } catch (calendarError) {
       console.error("❌ Error fetching calendar events:", calendarError);
+      webhookProcessingCache.delete(processingKey);
       return res.status(500).json({ message: "Error fetching calendar events" });
     }
 
-    console.log(`📅 Found ${events.length} events in recent timeframe`);
-
     let bookingsCreated = 0;
-    let bookingsUpdated = 0;
     let bookingsSkipped = 0;
-    let bookingsProtected = 0;
+    let htmlCleaned = 0;
+    let errors = [];
 
-    // Process each event with migration safety
+    // Process each event with FIXED duplicate protection
     for (const event of events) {
       try {
-        // Skip all-day events
-        if (!event.start.dateTime) {
-          console.log(`⏭️ Skipping all-day event: ${event.summary}`);
+        // Skip all-day events and events without proper time
+        if (!event.start?.dateTime) {
+          console.log(`⏭️ Skipping event without dateTime: ${event.summary}`);
           continue;
         }
 
-        const eventDate = new Date(event.start.dateTime);
-        console.log(`\n🔍 Processing event: ${event.summary} (${event.id})`);
-        console.log(`   📅 Event date: ${event.start.dateTime}`);
-        console.log(`   🕐 Event timezone: ${event.start.timeZone || 'Not specified'}`);
+        // EVENT-LEVEL RATE LIMITING: Prevent processing same event multiple times
+        const eventKey = `event_${event.id}`;
+        if (eventProcessingCache.has(eventKey)) {
+          const lastEventProcessed = eventProcessingCache.get(eventKey);
+          const timeSinceEventProcessed = now - lastEventProcessed;
 
-        // ROBUST DUPLICATE DETECTION: Check if ANY booking exists with this calendar event ID
+          if (timeSinceEventProcessed < EVENT_COOLDOWN_MS) {
+            console.log(`🚫 EVENT RATE LIMITED: ${event.id} processed ${timeSinceEventProcessed}ms ago`);
+            bookingsSkipped++;
+            continue;
+          }
+        }
+
+        console.log(`\n🔍 Processing event: ${event.summary} (${event.id})`);
+        console.log(`   📅 Start: ${event.start.dateTime}`);
+        console.log(`   📅 End: ${event.end?.dateTime}`);
+
+        // COMPREHENSIVE DUPLICATE CHECK - FIXED
         const existingBookings = await Booking.find({ calendarEventId: event.id });
 
         if (existingBookings.length > 0) {
           console.log(`   ⚠️ DUPLICATE DETECTED: ${existingBookings.length} booking(s) already exist for event ${event.id}`);
-          existingBookings.forEach((booking, index) => {
-            console.log(`      ${index + 1}. ${booking.customerName || 'No name'} - ${booking.startDate.toISOString().split('T')[0]} ${booking.startTime}`);
-          });
 
-          // If multiple bookings exist for the same event, this is a problem
-          if (existingBookings.length > 1) {
-            console.log(`   🚨 CRITICAL: Multiple bookings found for same calendar event! This should not happen.`);
+          // Clean HTML from existing bookings if needed
+          for (const booking of existingBookings) {
+            if (booking.customerName && booking.customerName.includes('<')) {
+              const cleanedName = cleanHTMLFromText(booking.customerName);
+              if (cleanedName !== booking.customerName) {
+                await Booking.findByIdAndUpdate(booking._id, {
+                  customerName: cleanedName,
+                  lastCleanupUpdate: new Date()
+                });
+                console.log(`   🧹 Fixed HTML in existing booking: "${booking.customerName}" → "${cleanedName}"`);
+                htmlCleaned++;
+              }
+            }
           }
 
           bookingsSkipped++;
+          eventProcessingCache.set(eventKey, now); // Mark event as processed
           continue;
         }
 
-        // FINAL SAFETY CHECK: Double-check right before creating
-        const finalCheck = await Booking.findOne({ calendarEventId: event.id });
-        if (finalCheck) {
-          console.log(`   ⚠️ RACE CONDITION PREVENTED: Booking created between checks for ${event.id}`);
-          bookingsSkipped++;
-          continue;
-        }
-
-        // CREATE: New manual booking from calendar event
+        // Create booking using the existing function (don't override it)
         console.log(`   ✅ Creating new booking for event ${event.id}`);
         const bookingData = await createBookingFromCalendarEvent(event, calendarType);
 
-        console.log(`   📋 Booking data: ${bookingData.customerName || 'No name'} - ${bookingData.studio} - ${bookingData.startTime}-${bookingData.endTime}`);
+        // CLEAN HTML from customer data before saving
+        if (bookingData.customerName) {
+          const originalName = bookingData.customerName;
+          bookingData.customerName = cleanHTMLFromText(originalName);
 
-        // MIGRATION SAFETY: Add migration tracking for new bookings
-        const safeBookingData = {
+          if (originalName !== bookingData.customerName) {
+            console.log(`   🧹 Cleaned HTML from new booking: "${originalName}" → "${bookingData.customerName}"`);
+            htmlCleaned++;
+          }
+        }
+
+        if (bookingData.customerEmail) {
+          bookingData.customerEmail = cleanHTMLFromText(bookingData.customerEmail);
+        }
+
+        if (bookingData.customerPhone) {
+          bookingData.customerPhone = cleanHTMLFromText(bookingData.customerPhone);
+        }
+
+        // Add enhanced tracking without overriding the core data
+        const enhancedBookingData = {
           ...bookingData,
           calendarEventId: event.id,
           syncVersion: SYNC_VERSION,
-          migrationSafe: eventDate >= MIGRATION_TIMESTAMP,
-          lastSyncUpdate: new Date()
+          migrationSafe: new Date(event.start.dateTime) >= MIGRATION_TIMESTAMP,
+          lastSyncUpdate: new Date(),
+          webhookProcessed: true
         };
 
-        try {
-          const newBooking = await Booking.create(safeBookingData);
-          console.log(`   ✅ CREATED manual booking: "${event.summary || 'No title'}" (${event.id}) - Safe: ${eventDate >= MIGRATION_TIMESTAMP}`);
-          console.log(`      Database ID: ${newBooking._id}`);
-          bookingsCreated++;
-        } catch (createError) {
-          if (createError.code === 11000) {
-            // Duplicate key error - booking already exists
-            console.log(`   ⚠️ DUPLICATE PREVENTED: Booking already exists for ${event.id} (MongoDB duplicate key error)`);
-            bookingsSkipped++;
-          } else {
-            console.error(`   ❌ CREATE ERROR: ${createError.message}`);
-            throw createError;
-          }
-        }
-      } catch (eventError) {
-        console.error(`❌ Error processing event ${event.id}:`, eventError);
-      }
-    }
-
-    // HANDLE INDIVIDUAL EVENT DELETIONS with migration safety
-    let bookingsDeleted = 0;
-
-    // Get all manual bookings (from admin calendar) that should exist
-    const manualBookings = await Booking.find({
-      paymentStatus: "manual",
-      calendarEventId: { $exists: true, $ne: null, $ne: "" }
-    });
-
-    console.log(`🔍 Checking ${manualBookings.length} manual bookings for deleted events`);
-
-    // Check each manual booking to see if its calendar event still exists
-    for (const booking of manualBookings) {
-      try {
-        // MIGRATION SAFETY: Only check deletions for migration-safe bookings
-        if (SAFE_MODE && !booking.migrationSafe) {
-          console.log(`🛡️ PROTECTED from deletion check: "${booking.customerName || 'No name'}" (pre-migration)`);
+        // Final duplicate check before creation
+        const finalCheck = await Booking.findOne({ calendarEventId: event.id });
+        if (finalCheck) {
+          console.log(`   ⚠️ RACE CONDITION PREVENTED: Booking created during processing`);
+          bookingsSkipped++;
+          eventProcessingCache.set(eventKey, now);
           continue;
         }
 
-        // Try to fetch the specific event
-        await calendar.events.get({
-          calendarId,
-          eventId: booking.calendarEventId
-        });
-        // Event exists, no action needed
+        const newBooking = await Booking.create(enhancedBookingData);
+        console.log(`   ✅ CREATED: ${newBooking.customerName || 'No name'} - ${newBooking.startTime} to ${newBooking.endTime}`);
+        console.log(`      Database ID: ${newBooking._id}`);
+        bookingsCreated++;
+        eventProcessingCache.set(eventKey, now); // Mark event as processed
+
       } catch (eventError) {
-        if (eventError.code === 404) {
-          // Event was deleted from calendar, delete the booking (only if migration-safe)
-          if (booking.migrationSafe || !SAFE_MODE) {
-            await Booking.deleteOne({ _id: booking._id });
-            console.log(`🗑️ DELETED booking for removed event: "${booking.customerName || 'No name'}" (${booking.calendarEventId})`);
-            bookingsDeleted++;
-          } else {
-            console.log(`🛡️ PROTECTED from deletion: "${booking.customerName || 'No name'}" (pre-migration)`);
-          }
-        } else {
-          console.error(`❌ Error checking event ${booking.calendarEventId}:`, eventError);
-        }
+        console.error(`❌ Error processing event ${event.id}:`, eventError);
+        errors.push(`Event ${event.id}: ${eventError.message}`);
       }
     }
 
-    const message = `Webhook: ${bookingsCreated} created, ${bookingsUpdated} updated, ${bookingsSkipped} skipped, ${bookingsProtected} protected, ${bookingsDeleted} deleted`;
-    console.log(`✅ ${message}`);
+    // Clean up processing flag and set completion timestamp
+    webhookProcessingCache.delete(processingKey);
+    webhookProcessingCache.set(webhookKey, now);
 
-    // Clean up processing flag
-    const cleanupProcessingKey = `processing_${resourceId}_${resourceState}`;
-    webhookProcessingCache.delete(cleanupProcessingKey);
+    const message = `Fixed Webhook: ${bookingsCreated} created, ${bookingsSkipped} skipped, ${htmlCleaned} HTML cleaned${errors.length > 0 ? `, ${errors.length} errors` : ''}`;
+    console.log(`✅ ${message}`);
 
     res.status(200).json({
       message,
       eventsProcessed: events.length,
       bookingsCreated,
-      bookingsUpdated,
       bookingsSkipped,
-      bookingsProtected,
-      bookingsDeleted,
+      htmlCleaned,
+      errors: errors.length > 0 ? errors : undefined,
+      processingTimeMs: Date.now() - now,
       calendarType,
       resourceState,
-      migrationTimestamp: MIGRATION_TIMESTAMP.toISOString(),
       safeMode: SAFE_MODE,
       syncVersion: SYNC_VERSION,
-      timeRange: `Recently updated events since ${oneDayAgo.toDateString()}`
+      fixed: true
     });
+
   } catch (error) {
-    console.error("❌ Error in calendar webhook:", error);
+    console.error("❌ Error in fixed calendar webhook:", error);
 
     // Clean up processing flag on error
-    const errorProcessingKey = `processing_${req.headers['x-goog-resource-id']}_${req.headers['x-goog-resource-state']}`;
+    const errorProcessingKey = `processing_${req.headers['x-goog-resource-id']}_${req.headers['x-goog-resource-state']}_${req.headers['x-goog-channel-id']}`;
     webhookProcessingCache.delete(errorProcessingKey);
 
-    res
-      .status(500)
-      .json({ message: "Error processing calendar webhook", error: error.message });
+    res.status(500).json({
+      message: "Error processing fixed calendar webhook",
+      error: error.message
+    });
   }
 }
