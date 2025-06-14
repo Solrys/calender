@@ -8,6 +8,20 @@ const MIGRATION_TIMESTAMP = new Date('2024-06-13T00:00:00Z'); // Only affect eve
 const SYNC_VERSION = 'v2.0-pacific-timezone'; // Version tag for tracking
 const SAFE_MODE = true; // Set to false only when you're confident
 
+// WEBHOOK RATE LIMITING: Simple in-memory cache to prevent duplicate processing
+const webhookProcessingCache = new Map();
+const WEBHOOK_COOLDOWN_MS = 5000; // 5 seconds cooldown between processing same webhook
+
+// Clean up old entries from cache periodically
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, timestamp] of webhookProcessingCache.entries()) {
+    if (now - timestamp > WEBHOOK_COOLDOWN_MS) {
+      webhookProcessingCache.delete(key);
+    }
+  }
+}, 30000); // Clean up every 30 seconds
+
 // Clean up and parse the service account JSON from the environment variable
 let serviceAccountKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
 if (
@@ -38,8 +52,25 @@ export default async function handler(req, res) {
     console.log(`📋 Webhook Details: State=${resourceState}, Resource=${resourceId}, Channel=${channelId}`);
 
     // RATE LIMITING: Prevent rapid duplicate webhook calls
-    const webhookKey = `webhook_${resourceId}_${resourceState}_${Date.now()}`;
-    console.log(`🔄 Processing webhook: ${webhookKey}`);
+    const webhookKey = `${resourceId}_${resourceState}`;
+    const webhookNow = Date.now();
+
+    if (webhookProcessingCache.has(webhookKey)) {
+      const lastProcessed = webhookProcessingCache.get(webhookKey);
+      const timeSinceLastProcessed = webhookNow - lastProcessed;
+
+      if (timeSinceLastProcessed < WEBHOOK_COOLDOWN_MS) {
+        console.log(`🚫 RATE LIMITED: Webhook ${webhookKey} processed ${timeSinceLastProcessed}ms ago (cooldown: ${WEBHOOK_COOLDOWN_MS}ms)`);
+        return res.status(200).json({
+          message: "Webhook rate limited",
+          cooldownRemaining: WEBHOOK_COOLDOWN_MS - timeSinceLastProcessed
+        });
+      }
+    }
+
+    // Mark this webhook as being processed
+    webhookProcessingCache.set(webhookKey, webhookNow);
+    console.log(`🔄 Processing webhook: ${webhookKey} (not rate limited)`);
 
     // Authenticate using the service account
     const auth = new google.auth.GoogleAuth({
@@ -133,77 +164,64 @@ export default async function handler(req, res) {
         }
 
         const eventDate = new Date(event.start.dateTime);
+        console.log(`\n🔍 Processing event: ${event.summary} (${event.id})`);
+        console.log(`   📅 Event date: ${event.start.dateTime}`);
+        console.log(`   🕐 Event timezone: ${event.start.timeZone || 'Not specified'}`);
 
-        // IMPROVED DUPLICATE DETECTION: Check if booking already exists
-        const existingBooking = await Booking.findOne({ calendarEventId: event.id });
+        // ROBUST DUPLICATE DETECTION: Check if ANY booking exists with this calendar event ID
+        const existingBookings = await Booking.find({ calendarEventId: event.id });
 
-        if (!existingBooking) {
-          // DUPLICATE SAFETY: Double-check before creating to prevent race conditions
-          const doubleCheckBooking = await Booking.findOne({ calendarEventId: event.id });
-          if (doubleCheckBooking) {
-            console.log(`⚠️ RACE CONDITION PREVENTED: Booking already exists for ${event.id}`);
-            continue;
+        if (existingBookings.length > 0) {
+          console.log(`   ⚠️ DUPLICATE DETECTED: ${existingBookings.length} booking(s) already exist for event ${event.id}`);
+          existingBookings.forEach((booking, index) => {
+            console.log(`      ${index + 1}. ${booking.customerName || 'No name'} - ${booking.startDate.toISOString().split('T')[0]} ${booking.startTime}`);
+          });
+
+          // If multiple bookings exist for the same event, this is a problem
+          if (existingBookings.length > 1) {
+            console.log(`   🚨 CRITICAL: Multiple bookings found for same calendar event! This should not happen.`);
           }
 
-          // CREATE: New manual booking from calendar event
-          const bookingData = await createBookingFromCalendarEvent(event, calendarType);
+          bookingsSkipped++;
+          continue;
+        }
 
-          // MIGRATION SAFETY: Add migration tracking for new bookings
-          const safeBookingData = {
-            ...bookingData,
-            calendarEventId: event.id,
-            syncVersion: SYNC_VERSION,
-            migrationSafe: eventDate >= MIGRATION_TIMESTAMP,
-            lastSyncUpdate: new Date()
-          };
+        // FINAL SAFETY CHECK: Double-check right before creating
+        const finalCheck = await Booking.findOne({ calendarEventId: event.id });
+        if (finalCheck) {
+          console.log(`   ⚠️ RACE CONDITION PREVENTED: Booking created between checks for ${event.id}`);
+          bookingsSkipped++;
+          continue;
+        }
 
-          try {
-            await Booking.create(safeBookingData);
-            console.log(`✅ CREATED manual booking: "${event.summary || 'No title'}" (${event.id}) - Safe: ${eventDate >= MIGRATION_TIMESTAMP}`);
-            bookingsCreated++;
-          } catch (createError) {
-            if (createError.code === 11000) {
-              // Duplicate key error - booking already exists
-              console.log(`⚠️ DUPLICATE PREVENTED: Booking already exists for ${event.id}`);
-            } else {
-              throw createError;
-            }
-          }
-        } else {
-          // MIGRATION SAFETY: Check if this booking is protected
-          if (SAFE_MODE && !existingBooking.migrationSafe && eventDate < MIGRATION_TIMESTAMP) {
-            bookingsProtected++;
-            console.log(`🛡️ PROTECTED: "${event.summary || 'No title'}" (before migration timestamp)`);
-            continue;
-          }
+        // CREATE: New manual booking from calendar event
+        console.log(`   ✅ Creating new booking for event ${event.id}`);
+        const bookingData = await createBookingFromCalendarEvent(event, calendarType);
 
-          // CHECK: Only update if event was actually modified
-          const eventLastModified = new Date(event.updated);
-          const bookingLastModified = new Date(existingBooking.updatedAt || existingBooking.createdAt);
+        console.log(`   📋 Booking data: ${bookingData.customerName || 'No name'} - ${bookingData.studio} - ${bookingData.startTime}-${bookingData.endTime}`);
 
-          if (eventLastModified > bookingLastModified) {
-            // UPDATE: Event was modified after booking
-            const bookingData = await createBookingFromCalendarEvent(event, calendarType);
+        // MIGRATION SAFETY: Add migration tracking for new bookings
+        const safeBookingData = {
+          ...bookingData,
+          calendarEventId: event.id,
+          syncVersion: SYNC_VERSION,
+          migrationSafe: eventDate >= MIGRATION_TIMESTAMP,
+          lastSyncUpdate: new Date()
+        };
 
-            // MIGRATION SAFETY: Preserve migration tracking on updates
-            const updateData = {
-              ...bookingData,
-              syncVersion: existingBooking.syncVersion || SYNC_VERSION,
-              migrationSafe: existingBooking.migrationSafe !== undefined ? existingBooking.migrationSafe : (eventDate >= MIGRATION_TIMESTAMP),
-              lastSyncUpdate: new Date()
-            };
-
-            await Booking.updateOne(
-              { calendarEventId: event.id },
-              { $set: updateData }
-            );
-
-            console.log(`📝 UPDATED booking (event modified): "${event.summary || 'No title'}" (${event.id})`);
-            bookingsUpdated++;
-          } else {
-            // SKIP: No changes needed
-            console.log(`✓ SKIPPED (no changes): "${event.summary || 'No title'}" (${event.id})`);
+        try {
+          const newBooking = await Booking.create(safeBookingData);
+          console.log(`   ✅ CREATED manual booking: "${event.summary || 'No title'}" (${event.id}) - Safe: ${eventDate >= MIGRATION_TIMESTAMP}`);
+          console.log(`      Database ID: ${newBooking._id}`);
+          bookingsCreated++;
+        } catch (createError) {
+          if (createError.code === 11000) {
+            // Duplicate key error - booking already exists
+            console.log(`   ⚠️ DUPLICATE PREVENTED: Booking already exists for ${event.id} (MongoDB duplicate key error)`);
             bookingsSkipped++;
+          } else {
+            console.error(`   ❌ CREATE ERROR: ${createError.message}`);
+            throw createError;
           }
         }
       } catch (eventError) {
