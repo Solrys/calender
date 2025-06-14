@@ -74,28 +74,36 @@ export function computeBlockedTimesByDate(bookings) {
     const isoDate = new Date(booking.startDate).toISOString();
     const datePart = isoDate.split('T')[0]; // Gets "2025-07-19"
 
+    // SAFER LOGIC: Only bookings with the SPECIFIC new sync version are already correct
+    // This prevents affecting existing manual bookings that might be working correctly
+    const isNewFixedBooking = booking.syncVersion === 'v2.5-date-timezone-fixed';
+
     // Only add +1 day for bookings that haven't been corrected yet
-    const needsCorrection = !booking.syncVersion || !booking.syncVersion.includes('v3.1-date-corrected');
+    // BUT NOT for bookings created with the new timezone-fixed handler
+    const needsCorrection = !isNewFixedBooking &&
+      (!booking.syncVersion ||
+        !booking.syncVersion.includes('v3.1-date-corrected'));
 
     let dateKey;
     if (needsCorrection) {
-      // BLOCKING FIX: Add +1 day to match dashboard display and Google Calendar for uncorrected bookings
+      // Apply +1 day correction to match the display logic
       const [year, month, day] = datePart.split('-');
-
-      // Create date at noon UTC to avoid timezone edge cases
       const correctedDate = new Date(`${year}-${month}-${day}T12:00:00.000Z`);
       correctedDate.setUTCDate(correctedDate.getUTCDate() + 1);
       dateKey = correctedDate.toISOString().split('T')[0];
     } else {
-      // For corrected bookings, use the date as-is
+      // For new fixed bookings, use the date as-is
       dateKey = datePart;
     }
 
     if (!blocked[dateKey]) {
       blocked[dateKey] = new Set();
     }
+
+    // Convert booking times to minute values and add to blocked set
     const start = timeStringToMinutes(booking.startTime);
     const end = timeStringToMinutes(booking.endTime);
+
     // Add each 30-minute slot from the booking start until (end + 30 minutes)
     for (let t = start - 30; t < end + 30; t += 30) {
       blocked[dateKey].add(t);

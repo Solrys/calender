@@ -110,8 +110,16 @@ export default function BookingPage() {
           // TIMEZONE-NEUTRAL FIX: Extract date directly from ISO string
           let bookingDateKey = new Date(booking.startDate).toISOString().split('T')[0];
 
+          // SAFER LOGIC: Only bookings with the SPECIFIC new sync version are already correct
+          // This prevents affecting existing manual bookings that might be working correctly
+          const isNewFixedBooking = booking.syncVersion === 'v2.5-date-timezone-fixed';
+
           // SMART DATE CORRECTION: Apply same logic as blocking function
-          const needsCorrection = !booking.syncVersion || !booking.syncVersion.includes('v3.1-date-corrected');
+          // BUT NOT for bookings created with the new timezone-fixed handler
+          const needsCorrection = !isNewFixedBooking &&
+            (!booking.syncVersion ||
+              !booking.syncVersion.includes('v3.1-date-corrected'));
+
           if (needsCorrection) {
             // Apply +1 day correction to match the blocking logic
             const [year, month, day] = bookingDateKey.split('-');
@@ -119,6 +127,7 @@ export default function BookingPage() {
             correctedDate.setUTCDate(correctedDate.getUTCDate() + 1);
             bookingDateKey = correctedDate.toISOString().split('T')[0];
           }
+          // For new fixed bookings, use the date as-is (no correction needed)
 
           if (
             selectedStudio.name === "BOTH THE LAB & THE EXTENSION FOR EVENTS"
