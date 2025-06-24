@@ -72,25 +72,28 @@ export function computeBlockedTimesByDate(bookings) {
   bookings.forEach((booking) => {
     // TIMEZONE-NEUTRAL FIX: Extract date directly from ISO string to avoid timezone conversion
     const isoDate = new Date(booking.startDate).toISOString();
-    const datePart = isoDate.split('T')[0]; // Gets "2025-07-19"
+    const datePart = isoDate.split("T")[0]; // Gets "2025-07-19"
 
     // SAFER LOGIC: Only bookings with the SPECIFIC new sync version are already correct
     // This prevents affecting existing manual bookings that might be working correctly
-    const isNewFixedBooking = booking.syncVersion === 'v2.5-date-timezone-fixed';
+    const isNewFixedBooking =
+      booking.syncVersion === "v2.5-date-timezone-fixed";
 
     // Only add +1 day for bookings that haven't been corrected yet
     // BUT NOT for bookings created with the new timezone-fixed handler
-    const needsCorrection = !isNewFixedBooking &&
+    const needsCorrection =
+      !isNewFixedBooking &&
       (!booking.syncVersion ||
-        !booking.syncVersion.includes('v3.1-date-corrected'));
+        (!booking.syncVersion.includes("v3.1-date-corrected") &&
+          !booking.syncVersion.includes("v3.4-calendar-database-synced")));
 
     let dateKey;
     if (needsCorrection) {
       // Apply +1 day correction to match the display logic
-      const [year, month, day] = datePart.split('-');
+      const [year, month, day] = datePart.split("-");
       const correctedDate = new Date(`${year}-${month}-${day}T12:00:00.000Z`);
       correctedDate.setUTCDate(correctedDate.getUTCDate() + 1);
-      dateKey = correctedDate.toISOString().split('T')[0];
+      dateKey = correctedDate.toISOString().split("T")[0];
     } else {
       // For new fixed bookings, use the date as-is
       dateKey = datePart;

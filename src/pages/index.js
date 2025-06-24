@@ -101,31 +101,42 @@ export default function BookingPage() {
         // Compute blocked times with special handling for the fourth studio.
         const filteredBookings = (data.bookings || []).filter((booking) => {
           // CRITICAL FIX: Only consider successful or manual bookings for time blocking
-          const validStatuses = ['success', 'manual'];
+          const validStatuses = ["success", "manual"];
           if (!validStatuses.includes(booking.paymentStatus)) {
-            console.log(`Excluding booking with status: ${booking.paymentStatus}`);
+            console.log(
+              `Excluding booking with status: ${booking.paymentStatus}`
+            );
             return false;
           }
 
           // TIMEZONE-NEUTRAL FIX: Extract date directly from ISO string
-          let bookingDateKey = new Date(booking.startDate).toISOString().split('T')[0];
+          let bookingDateKey = new Date(booking.startDate)
+            .toISOString()
+            .split("T")[0];
 
           // SAFER LOGIC: Only bookings with the SPECIFIC new sync version are already correct
           // This prevents affecting existing manual bookings that might be working correctly
-          const isNewFixedBooking = booking.syncVersion === 'v2.5-date-timezone-fixed';
+          const isNewFixedBooking =
+            booking.syncVersion === "v2.5-date-timezone-fixed";
 
           // SMART DATE CORRECTION: Apply same logic as blocking function
           // BUT NOT for bookings created with the new timezone-fixed handler
-          const needsCorrection = !isNewFixedBooking &&
+          const needsCorrection =
+            !isNewFixedBooking &&
             (!booking.syncVersion ||
-              !booking.syncVersion.includes('v3.1-date-corrected'));
+              (!booking.syncVersion.includes("v3.1-date-corrected") &&
+                !booking.syncVersion.includes(
+                  "v3.4-calendar-database-synced"
+                )));
 
           if (needsCorrection) {
             // Apply +1 day correction to match the blocking logic
-            const [year, month, day] = bookingDateKey.split('-');
-            const correctedDate = new Date(`${year}-${month}-${day}T12:00:00.000Z`);
+            const [year, month, day] = bookingDateKey.split("-");
+            const correctedDate = new Date(
+              `${year}-${month}-${day}T12:00:00.000Z`
+            );
             correctedDate.setUTCDate(correctedDate.getUTCDate() + 1);
-            bookingDateKey = correctedDate.toISOString().split('T')[0];
+            bookingDateKey = correctedDate.toISOString().split("T")[0];
           }
           // For new fixed bookings, use the date as-is (no correction needed)
 
@@ -165,7 +176,7 @@ export default function BookingPage() {
   // Determine minimum allowed booking hours (special studio requires at least 2)
   const minBookingHours =
     selectedStudio &&
-      selectedStudio.name === "BOTH THE LAB & THE EXTENSION FOR EVENTS"
+    selectedStudio.name === "BOTH THE LAB & THE EXTENSION FOR EVENTS"
       ? 2
       : 0;
 
