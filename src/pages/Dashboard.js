@@ -24,18 +24,20 @@ import AddonsDisplay from "@/components/Addon/AddonDisplay";
 const formatDateForDisplay = (dateString, syncVersion, paymentStatus) => {
   // Extract date from ISO string to avoid timezone conversion
   const isoDate = new Date(dateString).toISOString();
-  const datePart = isoDate.split('T')[0]; // Gets "2025-07-28"
-  const [year, month, day] = datePart.split('-');
+  const datePart = isoDate.split("T")[0]; // Gets "2025-07-28"
+  const [year, month, day] = datePart.split("-");
 
   // SAFER LOGIC: Only bookings with the SPECIFIC new sync version are already correct
   // This prevents affecting existing manual bookings that might be working correctly
-  const isNewFixedBooking = syncVersion === 'v2.5-date-timezone-fixed';
+  const isNewFixedBooking = syncVersion === "v2.5-date-timezone-fixed";
 
   // Only add +1 day for bookings that haven't been corrected yet
   // BUT NOT for bookings created with the new timezone-fixed handler
-  const needsCorrection = !isNewFixedBooking &&
+  const needsCorrection =
+    !isNewFixedBooking &&
     (!syncVersion ||
-      !syncVersion.includes('v3.1-date-corrected'));
+      (!syncVersion.includes("v3.1-date-corrected") &&
+        !syncVersion.includes("v3.4-calendar-database-synced")));
 
   if (needsCorrection) {
     // DASHBOARD FIX: Add +1 day to match Google Calendar display for uncorrected bookings
@@ -43,11 +45,19 @@ const formatDateForDisplay = (dateString, syncVersion, paymentStatus) => {
     correctedDate.setUTCDate(correctedDate.getUTCDate() + 1);
 
     // Convert to local date for formatting
-    const localDate = new Date(correctedDate.getUTCFullYear(), correctedDate.getUTCMonth(), correctedDate.getUTCDate());
+    const localDate = new Date(
+      correctedDate.getUTCFullYear(),
+      correctedDate.getUTCMonth(),
+      correctedDate.getUTCDate()
+    );
     return format(localDate, "MMM d, yyyy");
   } else {
     // For new fixed bookings, use the date as-is (no +1 day correction)
-    const localDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    const localDate = new Date(
+      parseInt(year),
+      parseInt(month) - 1,
+      parseInt(day)
+    );
     return format(localDate, "MMM d, yyyy");
   }
 };
@@ -55,18 +65,20 @@ const formatDateForDisplay = (dateString, syncVersion, paymentStatus) => {
 // Helper function for month/year filtering
 const getDatePartsForFilter = (dateString, syncVersion, paymentStatus) => {
   const isoDate = new Date(dateString).toISOString();
-  const datePart = isoDate.split('T')[0]; // Gets "2025-07-28"
-  const [year, month, day] = datePart.split('-');
+  const datePart = isoDate.split("T")[0]; // Gets "2025-07-28"
+  const [year, month, day] = datePart.split("-");
 
   // SAFER LOGIC: Only bookings with the SPECIFIC new sync version are already correct
   // This prevents affecting existing manual bookings that might be working correctly
-  const isNewFixedBooking = syncVersion === 'v2.5-date-timezone-fixed';
+  const isNewFixedBooking = syncVersion === "v2.5-date-timezone-fixed";
 
   // Only add +1 day for bookings that haven't been corrected yet
   // BUT NOT for bookings created with the new timezone-fixed handler
-  const needsCorrection = !isNewFixedBooking &&
+  const needsCorrection =
+    !isNewFixedBooking &&
     (!syncVersion ||
-      !syncVersion.includes('v3.1-date-corrected'));
+      (!syncVersion.includes("v3.1-date-corrected") &&
+        !syncVersion.includes("v3.4-calendar-database-synced")));
 
   if (needsCorrection) {
     // DASHBOARD FIX: Add +1 day to match display correction
@@ -75,15 +87,15 @@ const getDatePartsForFilter = (dateString, syncVersion, paymentStatus) => {
 
     return {
       year: correctedDate.getUTCFullYear().toString(),
-      month: (correctedDate.getUTCMonth() + 1).toString().padStart(2, '0'),
-      day: correctedDate.getUTCDate().toString().padStart(2, '0')
+      month: (correctedDate.getUTCMonth() + 1).toString().padStart(2, "0"),
+      day: correctedDate.getUTCDate().toString().padStart(2, "0"),
     };
   } else {
     // For new fixed bookings, use the date as-is (no +1 day correction)
     return {
       year: year,
       month: month,
-      day: day
+      day: day,
     };
   }
 };
@@ -126,12 +138,16 @@ export default function BookingDashboard() {
 
     if (monthFilter) {
       filtered = filtered.filter(
-        (b) => getDatePartsForFilter(b.startDate, b.syncVersion, b.paymentStatus).month === monthFilter
+        (b) =>
+          getDatePartsForFilter(b.startDate, b.syncVersion, b.paymentStatus)
+            .month === monthFilter
       );
     }
     if (yearFilter) {
       filtered = filtered.filter(
-        (b) => getDatePartsForFilter(b.startDate, b.syncVersion, b.paymentStatus).year === String(yearFilter)
+        (b) =>
+          getDatePartsForFilter(b.startDate, b.syncVersion, b.paymentStatus)
+            .year === String(yearFilter)
       );
     }
 
@@ -176,15 +192,22 @@ export default function BookingDashboard() {
       const addOns =
         b.items && b.items.length > 0
           ? b.items
-            .filter((item) => item.quantity > 0)
-            .map((item) => `${item.name} (${item.quantity})`)
-            .join("; ")
+              .filter((item) => item.quantity > 0)
+              .map((item) => `${item.name} (${item.quantity})`)
+              .join("; ")
           : "None";
 
       let totalHours = "N/A";
       try {
-        const dateParts = getDatePartsForFilter(b.startDate, b.syncVersion, b.paymentStatus);
-        const dateString = `${dateParts.year}-${dateParts.month.padStart(2, '0')}-${dateParts.day.padStart(2, '0')}`;
+        const dateParts = getDatePartsForFilter(
+          b.startDate,
+          b.syncVersion,
+          b.paymentStatus
+        );
+        const dateString = `${dateParts.year}-${dateParts.month.padStart(
+          2,
+          "0"
+        )}-${dateParts.day.padStart(2, "0")}`;
         const startDateTime = parse(
           `${dateString} ${b.startTime}`,
           "yyyy-MM-dd h:mm a",
@@ -202,10 +225,13 @@ export default function BookingDashboard() {
         console.error("Error calculating total hours", e);
       }
 
-      return `${format(new Date(b.createdAt), "MMM d, yyyy HH:mm:ss")},${b.customerName
-        },${b.customerPhone},${b.customerEmail},${b.studio},${b.paymentStatus
-        },${formatDateForDisplay(b.startDate, b.syncVersion, b.paymentStatus)},${b.startTime},${b.endTime
-        },${b.subtotal},${b.estimatedTotal},${addOns},${totalHours}`;
+      return `${format(new Date(b.createdAt), "MMM d, yyyy HH:mm:ss")},${
+        b.customerName
+      },${b.customerPhone},${b.customerEmail},${b.studio},${
+        b.paymentStatus
+      },${formatDateForDisplay(b.startDate, b.syncVersion, b.paymentStatus)},${
+        b.startTime
+      },${b.endTime},${b.subtotal},${b.estimatedTotal},${addOns},${totalHours}`;
     });
 
     const csvData = exportHeader + headers + csvRows.join("\n");
@@ -358,8 +384,17 @@ export default function BookingDashboard() {
               filteredBookings.map((booking) => {
                 let totalHours = "N/A";
                 try {
-                  const dateParts = getDatePartsForFilter(booking.startDate, booking.syncVersion, booking.paymentStatus);
-                  const dateString = `${dateParts.year}-${dateParts.month.padStart(2, '0')}-${dateParts.day.padStart(2, '0')}`;
+                  const dateParts = getDatePartsForFilter(
+                    booking.startDate,
+                    booking.syncVersion,
+                    booking.paymentStatus
+                  );
+                  const dateString = `${
+                    dateParts.year
+                  }-${dateParts.month.padStart(
+                    2,
+                    "0"
+                  )}-${dateParts.day.padStart(2, "0")}`;
                   const startDateTime = parse(
                     `${dateString} ${booking.startTime}`,
                     "yyyy-MM-dd h:mm a",
@@ -370,9 +405,10 @@ export default function BookingDashboard() {
                     "yyyy-MM-dd h:mm a",
                     new Date()
                   );
-                  totalHours = ((endDateTime - startDateTime) / (1000 * 60 * 60)).toFixed(
-                    1
-                  );
+                  totalHours = (
+                    (endDateTime - startDateTime) /
+                    (1000 * 60 * 60)
+                  ).toFixed(1);
                 } catch (e) {
                   console.error("Error calculating total hours", e);
                 }
@@ -391,7 +427,11 @@ export default function BookingDashboard() {
                     <TableCell>{booking.studio}</TableCell>
                     <TableCell>{booking.paymentStatus}</TableCell>
                     <TableCell>
-                      {formatDateForDisplay(booking.startDate, booking.syncVersion, booking.paymentStatus)}
+                      {formatDateForDisplay(
+                        booking.startDate,
+                        booking.syncVersion,
+                        booking.paymentStatus
+                      )}
                     </TableCell>
                     <TableCell>{booking.startTime}</TableCell>
                     <TableCell>{booking.endTime}</TableCell>
