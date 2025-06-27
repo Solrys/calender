@@ -19,6 +19,8 @@ import {
 } from "@/components/ui/table";
 import { saveAs } from "file-saver";
 import AddonsDisplay from "@/components/Addon/AddonDisplay";
+import AdminNav from "@/components/AdminNav/AdminNav";
+import Head from "next/head";
 
 // Timezone-neutral date formatting function
 const formatDateForDisplay = (dateString, syncVersion, paymentStatus) => {
@@ -106,9 +108,13 @@ export default function BookingDashboard() {
   const [monthFilter, setMonthFilter] = useState("");
   const [yearFilter, setYearFilter] = useState("");
   const [sortOption, setSortOption] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchBookings = async () => {
+      setIsLoading(true);
+      setError(null);
       try {
         const res = await fetch("/api/booking");
         if (!res.ok) {
@@ -128,6 +134,9 @@ export default function BookingDashboard() {
         }
       } catch (error) {
         console.error("❌ Error fetching bookings:", error);
+        setError("Failed to load studio bookings. Please try again later.");
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchBookings();
@@ -266,193 +275,225 @@ export default function BookingDashboard() {
   };
 
   return (
-    <div className="p-6">
-      <h2 className="text-xl font-bold mb-4">Bookings Dashboard</h2>
-      {/* Inline filter & sort controls */}
-      <div className="hidden md:flex items-center gap-4 mb-4 flex-nowrap">
-        <Select onValueChange={(value) => setMonthFilter(value)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Filter by Month" />
-          </SelectTrigger>
-          <SelectContent>
-            {[...Array(12)].map((_, i) => (
-              <SelectItem key={i} value={String(i + 1).padStart(2, "0")}>
-                {format(new Date(2025, i, 1), "MMMM")}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select onValueChange={(value) => setYearFilter(value)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Filter by Year" />
-          </SelectTrigger>
-          <SelectContent>
-            {[2024, 2025, 2026].map((year) => (
-              <SelectItem key={year} value={String(year)}>
-                {year}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select onValueChange={(value) => setSortOption(value)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Sort By" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="date-asc">Date Ascending</SelectItem>
-            <SelectItem value="date-desc">Date Descending</SelectItem>
-            <SelectItem value="studio-asc">Studio A–Z</SelectItem>
-            <SelectItem value="studio-desc">Studio Z–A</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button onClick={handleFilter}>Apply Filters</Button>
-        <Button onClick={clearFilters}>Clear Filters</Button>
-        <Button onClick={exportCSV}>Export CSV</Button>
-      </div>
+    <>
+      <Head>
+        <title>Studio Bookings Dashboard</title>
+      </Head>
+      <AdminNav />
+      <div className="p-6">
+        <h2 suppressHydrationWarning className="text-xl font-bold mb-4">
+          Bookings Dashboard
+        </h2>
 
-      {/* Mobile view filters */}
-      <div className="md:hidden grid grid-cols-3 gap-4 mb-4">
-        <Select onValueChange={(value) => setMonthFilter(value)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Month" />
-          </SelectTrigger>
-          <SelectContent>
-            {[...Array(12)].map((_, i) => (
-              <SelectItem key={i} value={String(i + 1).padStart(2, "0")}>
-                {format(new Date(2025, i, 1), "MMM")}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select onValueChange={(value) => setYearFilter(value)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Year" />
-          </SelectTrigger>
-          <SelectContent>
-            {[2024, 2025, 2026].map((year) => (
-              <SelectItem key={year} value={String(year)}>
-                {year}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select onValueChange={(value) => setSortOption(value)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Sort" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="date-asc">Date ↑</SelectItem>
-            <SelectItem value="date-desc">Date ↓</SelectItem>
-            <SelectItem value="studio-asc">Studio A-Z</SelectItem>
-            <SelectItem value="studio-desc">Studio Z-A</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button onClick={handleFilter}>Apply</Button>
-        <Button onClick={clearFilters}>Clear</Button>
-        <Button onClick={exportCSV}>Export</Button>
-      </div>
+        {/* Loading and error states */}
+        {isLoading && (
+          <div className="text-center py-10">
+            <p>Loading studio bookings...</p>
+          </div>
+        )}
 
-      {/* Bookings table */}
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Booking Time</TableHead>
-              <TableHead>Customer Name</TableHead>
-              <TableHead>Customer Phone</TableHead>
-              <TableHead>Customer Email</TableHead>
-              <TableHead>Studio</TableHead>
-              <TableHead>Payment Status</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Start Time</TableHead>
-              <TableHead>End Time</TableHead>
-              <TableHead>Subtotal</TableHead>
-              <TableHead>Total</TableHead>
-              <TableHead>Add‑ons</TableHead>
-              <TableHead>Total Hours</TableHead>
-              <TableHead>Cancel</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredBookings.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={14} className="text-center text-gray-500">
-                  No bookings found.
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredBookings.map((booking) => {
-                let totalHours = "N/A";
-                try {
-                  const dateParts = getDatePartsForFilter(
-                    booking.startDate,
-                    booking.syncVersion,
-                    booking.paymentStatus
-                  );
-                  const dateString = `${
-                    dateParts.year
-                  }-${dateParts.month.padStart(
-                    2,
-                    "0"
-                  )}-${dateParts.day.padStart(2, "0")}`;
-                  const startDateTime = parse(
-                    `${dateString} ${booking.startTime}`,
-                    "yyyy-MM-dd h:mm a",
-                    new Date()
-                  );
-                  const endDateTime = parse(
-                    `${dateString} ${booking.endTime}`,
-                    "yyyy-MM-dd h:mm a",
-                    new Date()
-                  );
-                  totalHours = (
-                    (endDateTime - startDateTime) /
-                    (1000 * 60 * 60)
-                  ).toFixed(1);
-                } catch (e) {
-                  console.error("Error calculating total hours", e);
-                }
+        {error && (
+          <div className="text-center py-10 text-red-500">
+            <p>{error}</p>
+            <Button onClick={() => window.location.reload()} className="mt-4">
+              Retry
+            </Button>
+          </div>
+        )}
 
-                return (
-                  <TableRow key={booking._id}>
-                    <TableCell>
-                      {format(
-                        new Date(booking.createdAt),
-                        "MMM d, yyyy HH:mm:ss"
-                      )}
-                    </TableCell>
-                    <TableCell>{booking.customerName}</TableCell>
-                    <TableCell>{booking.customerPhone}</TableCell>
-                    <TableCell>{booking.customerEmail}</TableCell>
-                    <TableCell>{booking.studio}</TableCell>
-                    <TableCell>{booking.paymentStatus}</TableCell>
-                    <TableCell>
-                      {formatDateForDisplay(
-                        booking.startDate,
-                        booking.syncVersion,
-                        booking.paymentStatus
-                      )}
-                    </TableCell>
-                    <TableCell>{booking.startTime}</TableCell>
-                    <TableCell>{booking.endTime}</TableCell>
-                    <TableCell>${booking.subtotal}</TableCell>
-                    <TableCell>${booking.estimatedTotal}</TableCell>
-                    <TableCell>
-                      <AddonsDisplay items={booking.items} />
-                    </TableCell>
-                    <TableCell>{totalHours} hours</TableCell>
-                    <TableCell>
-                      <Button onClick={() => cancelBooking(booking._id)}>
-                        Cancel
-                      </Button>
-                    </TableCell>
+        {!isLoading && !error && (
+          <>
+            {/* Inline filter & sort controls */}
+            <div className="hidden md:flex items-center gap-4 mb-4 flex-nowrap">
+              <Select onValueChange={(value) => setMonthFilter(value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by Month" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[...Array(12)].map((_, i) => (
+                    <SelectItem key={i} value={String(i + 1).padStart(2, "0")}>
+                      {format(new Date(2025, i, 1), "MMMM")}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select onValueChange={(value) => setYearFilter(value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by Year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[2024, 2025, 2026].map((year) => (
+                    <SelectItem key={year} value={String(year)}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select onValueChange={(value) => setSortOption(value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sort By" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="date-asc">Date Ascending</SelectItem>
+                  <SelectItem value="date-desc">Date Descending</SelectItem>
+                  <SelectItem value="studio-asc">Studio A–Z</SelectItem>
+                  <SelectItem value="studio-desc">Studio Z–A</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button onClick={handleFilter}>Apply Filters</Button>
+              <Button onClick={clearFilters}>Clear Filters</Button>
+              <Button onClick={exportCSV}>Export CSV</Button>
+            </div>
+
+            {/* Mobile view filters */}
+            <div className="md:hidden grid grid-cols-3 gap-4 mb-4">
+              <Select onValueChange={(value) => setMonthFilter(value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Month" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[...Array(12)].map((_, i) => (
+                    <SelectItem key={i} value={String(i + 1).padStart(2, "0")}>
+                      {format(new Date(2025, i, 1), "MMM")}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select onValueChange={(value) => setYearFilter(value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[2024, 2025, 2026].map((year) => (
+                    <SelectItem key={year} value={String(year)}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select onValueChange={(value) => setSortOption(value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sort" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="date-asc">Date ↑</SelectItem>
+                  <SelectItem value="date-desc">Date ↓</SelectItem>
+                  <SelectItem value="studio-asc">Studio A-Z</SelectItem>
+                  <SelectItem value="studio-desc">Studio Z-A</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button onClick={handleFilter}>Apply</Button>
+              <Button onClick={clearFilters}>Clear</Button>
+              <Button onClick={exportCSV}>Export</Button>
+            </div>
+
+            {/* Bookings table */}
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Booking Time</TableHead>
+                    <TableHead>Customer Name</TableHead>
+                    <TableHead>Customer Phone</TableHead>
+                    <TableHead>Customer Email</TableHead>
+                    <TableHead>Studio</TableHead>
+                    <TableHead>Payment Status</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Start Time</TableHead>
+                    <TableHead>End Time</TableHead>
+                    <TableHead>Subtotal</TableHead>
+                    <TableHead>Total</TableHead>
+                    <TableHead>Add‑ons</TableHead>
+                    <TableHead>Total Hours</TableHead>
+                    <TableHead>Cancel</TableHead>
                   </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredBookings.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={14}
+                        className="text-center text-gray-500"
+                      >
+                        No bookings found.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredBookings.map((booking) => {
+                      let totalHours = "N/A";
+                      try {
+                        const dateParts = getDatePartsForFilter(
+                          booking.startDate,
+                          booking.syncVersion,
+                          booking.paymentStatus
+                        );
+                        const dateString = `${
+                          dateParts.year
+                        }-${dateParts.month.padStart(
+                          2,
+                          "0"
+                        )}-${dateParts.day.padStart(2, "0")}`;
+                        const startDateTime = parse(
+                          `${dateString} ${booking.startTime}`,
+                          "yyyy-MM-dd h:mm a",
+                          new Date()
+                        );
+                        const endDateTime = parse(
+                          `${dateString} ${booking.endTime}`,
+                          "yyyy-MM-dd h:mm a",
+                          new Date()
+                        );
+                        totalHours = (
+                          (endDateTime - startDateTime) /
+                          (1000 * 60 * 60)
+                        ).toFixed(1);
+                      } catch (e) {
+                        console.error("Error calculating total hours", e);
+                      }
+
+                      return (
+                        <TableRow key={booking._id}>
+                          <TableCell>
+                            {format(
+                              new Date(booking.createdAt),
+                              "MMM d, yyyy HH:mm:ss"
+                            )}
+                          </TableCell>
+                          <TableCell>{booking.customerName}</TableCell>
+                          <TableCell>{booking.customerPhone}</TableCell>
+                          <TableCell>{booking.customerEmail}</TableCell>
+                          <TableCell>{booking.studio}</TableCell>
+                          <TableCell>{booking.paymentStatus}</TableCell>
+                          <TableCell>
+                            {formatDateForDisplay(
+                              booking.startDate,
+                              booking.syncVersion,
+                              booking.paymentStatus
+                            )}
+                          </TableCell>
+                          <TableCell>{booking.startTime}</TableCell>
+                          <TableCell>{booking.endTime}</TableCell>
+                          <TableCell>${booking.subtotal}</TableCell>
+                          <TableCell>${booking.estimatedTotal}</TableCell>
+                          <TableCell>
+                            <AddonsDisplay items={booking.items} />
+                          </TableCell>
+                          <TableCell>{totalHours} hours</TableCell>
+                          <TableCell>
+                            <Button onClick={() => cancelBooking(booking._id)}>
+                              Cancel
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </>
+        )}
       </div>
-    </div>
+    </>
   );
 }

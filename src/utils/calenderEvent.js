@@ -63,6 +63,49 @@ async function createCalendarEvent(eventData) {
   }
 }
 
+// NEW: Function to create service calendar events
+export async function createServiceCalendarEvent(eventData) {
+  try {
+    console.log(
+      "🗓️ Service Calendar ID:",
+      process.env.GOOGLE_CALENDAR_ID_WEBSITE_SERVICE
+    );
+    // Use the Service Calendar for service bookings
+    const calendarId = process.env.GOOGLE_CALENDAR_ID_WEBSITE_SERVICE;
+
+    // Ensure timezone is Eastern Time
+    if (eventData.start && eventData.start.dateTime) {
+      eventData.start.timeZone = "America/New_York";
+    }
+    if (eventData.end && eventData.end.dateTime) {
+      eventData.end.timeZone = "America/New_York";
+    }
+
+    const response = await calendar.events.insert({
+      calendarId,
+      requestBody: eventData,
+    });
+
+    console.log("✅ Service booking calendar event created:", response.data.id);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Failed to create service calendar event");
+
+    // Print full error details for debugging
+    if (error.errors || error.response?.data) {
+      console.error(
+        "🧩 Google API Error:",
+        JSON.stringify(error.response?.data || error.errors, null, 2)
+      );
+    }
+
+    throw new Error(
+      error.message ||
+        "Unknown error occurred while creating service calendar event"
+    );
+  }
+}
+
 export default createCalendarEvent;
 
 export async function deleteCalendarEvent(eventId, bookingType = "website") {
@@ -83,10 +126,16 @@ export async function deleteCalendarEvent(eventId, bookingType = "website") {
       eventId,
     });
 
-    console.log(`✅ Calendar event deleted from ${bookingType} calendar:`, eventId);
+    console.log(
+      `✅ Calendar event deleted from ${bookingType} calendar:`,
+      eventId
+    );
     return true;
   } catch (error) {
-    console.error(`❌ Error deleting event from ${bookingType} calendar:`, error);
+    console.error(
+      `❌ Error deleting event from ${bookingType} calendar:`,
+      error
+    );
     throw error;
   }
 }

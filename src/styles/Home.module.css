@@ -5,7 +5,7 @@
   align-items: center;
   height: 100%;
   gap: 20px;
-  padding: 40px 50px;
+  padding: 40px 0px;
   width: 100%;
 }
 .wrap {
@@ -17,14 +17,15 @@
   align-items: flex-start;
 }
 .row {
-  width: 67%;
+  width: 100%;
   padding: 20px 40px;
   display: grid;
   grid-template-columns: 100%;
   /* flex-flow: row; */
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   gap: 20px;
+  min-height: fit-content;
   box-shadow: rgba(14, 63, 126, 0.04) 0px 0px 0px 1px,
     rgba(42, 51, 69, 0.04) 0px 1px 1px -0.5px,
     rgba(42, 51, 70, 0.04) 0px 3px 3px -1.5px,
@@ -36,8 +37,8 @@
   display: grid;
   grid-template-columns: 59% 37%;
   gap: 30px;
-  height: 100%;
-  align-items: center;
+  min-height: fit-content;
+  align-items: flex-start;
   justify-content: flex-start;
 }
 .calender {
