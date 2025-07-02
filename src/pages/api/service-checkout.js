@@ -2,6 +2,7 @@ import Stripe from "stripe";
 import { format } from "date-fns";
 import dbConnect from "@/lib/dbConnect";
 import ServiceBooking from "@/models/Service";
+import Product from "@/models/Product";
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -45,44 +46,117 @@ export default async function handler(req, res) {
         .json({ message: "At least one service must be selected" });
     }
 
-    // Validate subtotal (basic validation)
-    const calculatedSubtotal = services.reduce((acc, service) => {
-      const serviceCost = service.totalCost || service.price * service.quantity;
+    // 🔒 SECURITY: Fetch authoritative service prices from MongoDB
+    const productDoc = await Product.findOne().lean();
+    if (!productDoc) {
+      return res
+        .status(500)
+        .json({ message: "Service catalog not found in database" });
+    }
+
+    // Create a price map from MongoDB for validation
+    const servicePriceMap = {};
+    productDoc.services.forEach((service) => {
+      servicePriceMap[String(service.id)] = service.pricePerHour;
+    });
+
+    // Also include prices from BookingContext (since not all services may be in Product collection yet)
+    // This handles items like the new podcast services, additional video editing, etc.
+    const contextServicePrices = {
+      1: 300, // Makeup
+      6: 350, // Photography
+      7: 650, // Videography
+      8: 250, // Hair
+      10: 400, // Models
+      11: 500, // Wardrobe
+      12: 250, // Assistant/BTS Reels
+      13: 2500, // Creative Direction
+      14: 500, // Moodboard
+      15: 850, // Full-Service Podcast Filming
+      16: 1500, // Full-Service Podcast Filming + Editing
+      17: 250, // Additional Edited Videos
+    };
+
+    // Merge MongoDB prices with context prices (MongoDB takes precedence)
+    const authorizedPrices = { ...contextServicePrices, ...servicePriceMap };
+
+    // 🔒 VALIDATE: Check each service against authorized prices
+    let recalculatedSubtotal = 0;
+    for (const service of services) {
+      const serviceId = String(service.id);
+      const authorizedPrice = authorizedPrices[serviceId];
+
+      if (authorizedPrice === undefined) {
+        return res.status(400).json({
+          message: `Invalid service: ${service.name} (ID: ${serviceId})`,
+          availableServices: Object.keys(authorizedPrices),
+        });
+      }
+
+      // Check if client-provided price matches authorized price
+      if (Number(service.price) !== authorizedPrice) {
+        return res.status(400).json({
+          message: `Price tampering detected for ${service.name}`,
+          providedPrice: service.price,
+          authorizedPrice: authorizedPrice,
+          serviceId: serviceId,
+        });
+      }
+
+      // Calculate using authorized price (not client-provided price)
+      const serviceCost = authorizedPrice * service.quantity;
+      recalculatedSubtotal += serviceCost;
+
       console.log(
-        `Service ${service.name}: price=${service.price}, qty=${service.quantity}, totalCost=${service.totalCost}, calculated=${serviceCost}`
+        `✅ Service ${service.name} (ID: ${serviceId}): authorized_price=${authorizedPrice}, qty=${service.quantity}, cost=${serviceCost}`
       );
-      return acc + serviceCost;
-    }, 0);
+    }
 
     console.log(
-      `Calculated subtotal: ${calculatedSubtotal}, provided subtotal: ${subtotal}`
+      `🔒 VALIDATION: Recalculated subtotal: ${recalculatedSubtotal}, client subtotal: ${subtotal}`
     );
 
-    if (Math.abs(calculatedSubtotal - subtotal) > 0.01) {
+    // Validate subtotal against recalculated amount using authorized prices
+    if (Math.abs(recalculatedSubtotal - subtotal) > 0.01) {
       return res.status(400).json({
-        message: "Subtotal mismatch",
-        calculated: calculatedSubtotal,
-        provided: subtotal,
-        services: services,
+        message: "Subtotal validation failed - price tampering detected",
+        recalculatedSubtotal: recalculatedSubtotal,
+        providedSubtotal: subtotal,
+        difference: Math.abs(recalculatedSubtotal - subtotal),
+        services: services.map((s) => ({
+          name: s.name,
+          id: s.id,
+          providedPrice: s.price,
+          authorizedPrice: authorizedPrices[String(s.id)],
+          quantity: s.quantity,
+        })),
       });
     }
 
-    // Create service booking in database first
+    // Create service booking in database using validated data
     let serviceBooking;
     try {
+      // Use recalculated subtotal from authorized prices for security
       serviceBooking = await new ServiceBooking({
         startDate: new Date(startDate),
         startTime,
         endTime,
-        services,
-        subtotal,
-        estimatedTotal,
+        services: services.map((service) => ({
+          ...service,
+          // Ensure we store the authorized price, not client-provided price
+          price: authorizedPrices[String(service.id)],
+        })),
+        subtotal: recalculatedSubtotal, // Use validated subtotal
+        estimatedTotal: recalculatedSubtotal, // For services, total equals subtotal
         customerName,
         customerEmail,
         customerPhone,
         paymentStatus: "pending",
         timestamp,
         createdAt: new Date(),
+        // Add security tracking
+        priceValidated: true,
+        validationTimestamp: new Date(),
       }).save();
 
       console.log(
@@ -102,12 +176,13 @@ export default async function handler(req, res) {
       ? format(new Date(startDate), "MMMM d, yyyy")
       : "";
 
-    // Create line items from services
+    // Create line items from services using validated prices
     const lineItems = services.map((service) => {
-      // Use totalCost if available (which includes hours calculation), otherwise use price
-      const unitPrice = service.totalCost
-        ? service.totalCost / (service.quantity || 1)
-        : service.price;
+      const serviceId = String(service.id);
+      const authorizedPrice = authorizedPrices[serviceId];
+
+      // 🔒 SECURITY: Always use authorized price from our system, never client-provided price
+      const unitPrice = authorizedPrice;
 
       return {
         price_data: {
@@ -116,7 +191,7 @@ export default async function handler(req, res) {
             name: `${service.name} Service`,
             description: `Booked for ${formattedDate} from ${startTime} to ${endTime}`,
           },
-          unit_amount: Math.round(unitPrice * 100), // Convert to cents
+          unit_amount: Math.round(unitPrice * 100), // Convert to cents using authorized price
         },
         quantity: service.quantity || 1,
       };

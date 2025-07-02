@@ -81,12 +81,33 @@ export async function createServiceCalendarEvent(eventData) {
       eventData.end.timeZone = "America/New_York";
     }
 
+    // 🔒 LOOP PREVENTION: Add system identification markers to prevent webhook loops
+    const enhancedEventData = {
+      ...eventData,
+      // Add system identifier in description
+      description: `${
+        eventData.description || ""
+      }\n\n🤖 SYSTEM_CREATED: ${new Date().toISOString()}\nCREATED_BY: service-booking-system\nWEBHOOK_IGNORE: true`,
+      // Add custom properties if supported
+      extendedProperties: {
+        private: {
+          systemCreated: "true",
+          createdBy: "service-booking-system",
+          createdAt: new Date().toISOString(),
+          webhookIgnore: "true",
+        },
+      },
+    };
+
     const response = await calendar.events.insert({
       calendarId,
-      requestBody: eventData,
+      requestBody: enhancedEventData,
     });
 
-    console.log("✅ Service booking calendar event created:", response.data.id);
+    console.log(
+      "✅ Service booking calendar event created with system markers:",
+      response.data.id
+    );
     return response.data;
   } catch (error) {
     console.error("❌ Failed to create service calendar event");

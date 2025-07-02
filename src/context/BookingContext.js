@@ -122,6 +122,34 @@ export function BookingProvider({ children }) {
       description:
         "A carefully curated visual guide designed to capture your project's essence. Our moodboard ensures a cohesive aesthetic, providing a clear roadmap for your team to achieve a flawlessly executed production or event.",
     },
+    {
+      id: 15,
+      name: "Full-Service Podcast Filming (4 HR INCLUDED)",
+      price: 850,
+      quantity: 0,
+      image: "/service/podcast_filming.jpg",
+      description:
+        "Our in-house podcast producer runs the show—just walk in, and we'll handle the rest. Equipped with professional-grade cameras, crystal-clear sound systems, and full lighting kits; including a 300-watt key light with a large lantern modifier, backlight kickers, C-stand, dual light stands, and real-time monitors, everything is ready to go. This includes set-up and break-down time.",
+    },
+    {
+      id: 16,
+      name: "Full-Service Podcast Filming + Editing",
+      price: 1500,
+      quantity: 0,
+      image: "/service/podcast_filming_editing.jpg",
+      description:
+        "Our in-house podcast producer runs the show—just walk in, and we'll handle the rest. Equipped with professional-grade cameras, crystal-clear sound systems, and full lighting kits; including a 300-watt key light with a large lantern modifier, backlight kickers, C-stand, dual light stands, and real-time monitors, everything is ready to go. This includes set-up and break-down time. After filming, our team handles Post-Production Editing—Cutting, mixing, color-correcting, and optimizing your episode for all platforms. From shoot to final export, we've got you covered.",
+    },
+    {
+      id: 17,
+      name: "Additional Edited Videos",
+      price: 250,
+      quantity: 0,
+      image: "/service/extra_videography.jpg",
+      description:
+        "In addition to our in-house videography service that delivers high-end visual content using full shoot setup with professional lighting and all necessary production equipment, you may add extra content - such as edited videos or reels for $250 per hour of work. The number of deliverables may vary based on the scope of hours requested.",
+      requiresService: 7, // Requires Videography service (ID 7) to be selected
+    },
   ]);
   const cleaningFee = event ? 180 : 0;
   // Provide a function to update item quantity.

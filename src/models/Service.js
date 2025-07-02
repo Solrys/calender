@@ -17,6 +17,9 @@ const ServiceBookingSchema = new mongoose.Schema({
   syncVersion: { type: String, default: "v3.4-service-booking" },
   bookingType: { type: String, default: "service" }, // To distinguish from studio bookings
   timestamp: { type: String, default: null }, // Client timestamp for debugging
+  // Security fields for price validation
+  priceValidated: { type: Boolean, default: false },
+  validationTimestamp: { type: Date, default: null },
 });
 
 export default mongoose.models.ServiceBooking ||
