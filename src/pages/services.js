@@ -64,6 +64,7 @@ export default function ServicesPage() {
 
     // Navigate to service checkout
     router.push("/service-checkout");
+    console.log(selectedServices);
   };
 
   return (
@@ -104,7 +105,7 @@ export default function ServicesPage() {
             {/* Service Name & Price with Description Tooltip */}
             <div className="flex justify-between flex-wrap px-2">
               <div className="flex flex-1 items-center space-x-2">
-                <p className="font-semibold text-sm uppercase cursor-help whitespace-nowrap">
+                <p className="font-semibold text-sm uppercase cursor-help">
                   {item.name}
                 </p>
                 <Tippy content={item.description} placement="top">
