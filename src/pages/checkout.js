@@ -44,7 +44,11 @@ export default function CheckoutPage() {
 
   // Calculate totals
   const subtotal = items.reduce(
-    (acc, item) => acc + item.quantity * item.price,
+    (acc, item) =>
+      acc +
+      (item.id === 18
+        ? item.quantity * item.price // Per-item pricing for Additional Edited Photos
+        : item.quantity * item.price), // Note: addons are already per-item by default, but keeping consistent
     0
   );
   const studioHours =
@@ -266,8 +270,8 @@ export default function CheckoutPage() {
 
         <div>
           <div className="grid grid-cols-3 gap-4 font-semibold text-gray-600 mb-4">
-            <p className="text-center">Total Hours</p>
-            <p className="text-center">Price/Hr</p>
+            <p className="text-center">Quantity</p>
+            <p className="text-center">Unit Price</p>
             <p className="text-center">Total Price</p>
           </div>
           {filteredItems.map((item) => (
@@ -293,9 +297,13 @@ export default function CheckoutPage() {
                 </button>
               </div>
 
-              {/* Price per hour */}
+              {/* Price per unit */}
               <p className="flex items-center gap-2 justify-center bg-[#f8f8f8] px-4 py-3 font-semibold text-center text-sm w-full">
-                ${item.price}/Hr
+                {
+                  item.id === 18
+                    ? `$${item.price}` // For Additional Edited Photos, show per-photo price
+                    : `$${item.price}/Hr` // For hour-based addons, show per-hour price
+                }
               </p>
 
               {/* Total Price for item */}

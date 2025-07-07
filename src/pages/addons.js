@@ -103,7 +103,8 @@ export default function AddOnsPage() {
                   {item.id === 13 ||
                   item.id === 14 ||
                   item.id === 15 ||
-                  item.id === 16
+                  item.id === 16 ||
+                  item.id === 18
                     ? `$${item.price}`
                     : `$${item.price}/Hr`}
                 </p>

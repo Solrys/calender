@@ -80,7 +80,10 @@ export default function ServiceCheckoutPage() {
 
   const serviceCosts = displayServices.map((service) => ({
     ...service,
-    totalCost: service.price * service.quantity * serviceHours,
+    totalCost:
+      service.id === 18
+        ? service.price * service.quantity // Per-item pricing for Additional Edited Photos
+        : service.price * service.quantity * serviceHours, // Per-hour pricing for other services
   }));
 
   const subtotal = serviceCosts.reduce(
@@ -219,8 +222,8 @@ export default function ServiceCheckoutPage() {
 
         <div>
           <div className="grid grid-cols-3 gap-4 font-semibold text-gray-600 mb-4">
-            <p className="text-center">Total Hours</p>
-            <p className="text-center">Price/Hr</p>
+            <p className="text-center">Quantity</p>
+            <p className="text-center">Unit Price</p>
             <p className="text-center">Total Price</p>
           </div>
           {displayServices.map((service) => (
@@ -230,17 +233,30 @@ export default function ServiceCheckoutPage() {
             >
               {/* Quantity */}
               <p className="flex items-center gap-2 justify-center bg-[#f8f8f8] px-4 py-3 font-semibold text-center text-sm w-full">
-                {service.quantity * serviceHours}
+                {
+                  service.id === 18
+                    ? service.quantity // For Additional Edited Photos, show just quantity
+                    : service.quantity * serviceHours // For hour-based services, show total hours
+                }
               </p>
 
-              {/* Price per hour */}
+              {/* Price per unit */}
               <p className="flex items-center gap-2 justify-center bg-[#f8f8f8] px-4 py-3 font-semibold text-center text-sm w-full">
-                ${service.price}/Hr
+                {
+                  service.id === 18
+                    ? `$${service.price}` // For Additional Edited Photos, show per-photo price
+                    : `$${service.price}/Hr` // For hour-based services, show per-hour price
+                }
               </p>
 
               {/* Total Price for service */}
               <p className="flex items-center gap-2 justify-center bg-[#f8f8f8] px-4 py-3 font-semibold text-center text-sm w-full">
-                ${service.price * service.quantity * serviceHours}
+                $
+                {
+                  service.id === 18
+                    ? service.price * service.quantity // Per-item pricing for Additional Edited Photos
+                    : service.price * service.quantity * serviceHours // Per-hour pricing for other services
+                }
               </p>
             </div>
           ))}

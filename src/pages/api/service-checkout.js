@@ -75,6 +75,7 @@ export default async function handler(req, res) {
       15: 850, // Full-Service Podcast Filming
       16: 1500, // Full-Service Podcast Filming + Editing
       17: 250, // Additional Edited Videos
+      18: 15, // Additional Edited Photos
     };
 
     // Merge MongoDB prices with context prices (MongoDB takes precedence)

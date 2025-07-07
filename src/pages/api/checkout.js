@@ -50,11 +50,41 @@ export default async function handler(req, res) {
       priceMap[String(service.id)] = service.pricePerHour;
     });
 
+    // Also include prices from BookingContext for new services not yet in Product collection
+    const contextServicePrices = {
+      1: 300, // Makeup
+      6: 350, // Photography
+      7: 650, // Videography
+      8: 250, // Hair
+      10: 400, // Models
+      11: 500, // Wardrobe
+      12: 250, // Assistant/BTS Reels
+      13: 2500, // Creative Direction
+      14: 500, // Moodboard
+      15: 850, // Full-Service Podcast Filming
+      16: 1500, // Full-Service Podcast Filming + Editing
+      17: 250, // Additional Edited Videos
+      18: 15, // Additional Edited Photos
+    };
+
+    // Merge MongoDB prices with context prices (MongoDB takes precedence)
+    const authorizedPrices = { ...contextServicePrices, ...priceMap };
+
     let recalculatedSubtotal = 0;
     for (const item of clientItems) {
-      const price = priceMap[String(item.id)];
+      const price = authorizedPrices[String(item.id)];
       if (price === undefined)
         return res.status(400).json({ message: `Invalid item: ${item.name}` });
+
+      // Validate client-provided price matches authorized price
+      if (Number(item.price) !== price) {
+        return res.status(400).json({
+          message: `Price tampering detected for ${item.name}`,
+          providedPrice: item.price,
+          authorizedPrice: price,
+        });
+      }
+
       recalculatedSubtotal += item.quantity * price;
     }
 
