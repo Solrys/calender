@@ -148,7 +148,15 @@ export function BookingProvider({ children }) {
       image: "/service/extra_videography.jpg",
       description:
         "In addition to our in-house videography service that delivers high-end visual content using full shoot setup with professional lighting and all necessary production equipment, you may add extra content - such as edited videos or reels for $250 per hour of work. The number of deliverables may vary based on the scope of hours requested.",
-      requiresService: 7, // Requires Videography service (ID 7) to be selected
+    },
+    {
+      id: 18,
+      name: "Additional Edited Photos",
+      price: 15,
+      quantity: 0,
+      image: "/service/additional_photo.jpg",
+      description:
+        "In addition to our in-house photography service, which is complete with full lighting set up and all essential equipment, you may add extra high-quality professionally edited photos for $15 each.",
     },
   ]);
   const cleaningFee = event ? 180 : 0;
