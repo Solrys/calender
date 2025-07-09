@@ -103,9 +103,10 @@ export default function AddOnsPage() {
                   {item.id === 13 ||
                   item.id === 14 ||
                   item.id === 15 ||
-                  item.id === 16 ||
-                  item.id === 18
+                  item.id === 16
                     ? `$${item.price}`
+                    : item.id === 18
+                    ? `$${item.price}/Ea`
                     : `$${item.price}/Hr`}
                 </p>
                 <div className="flex items-center justify-center gap-1">
