@@ -38,13 +38,21 @@ export default function TimeSlider({
   isMobile,
   handleNext,
   bookingHours = 0, // booking hours required for continuous availability
+  minStartTime = null, // minimum start time (e.g., "4:00 PM")
 }) {
   // Compute the available times based on bookingHours.
   // If bookingHours > 0, filter out slots that can't accommodate the entire block.
   const availableTimes = useMemo(() => {
     let times = ALL_TIMES;
+
+    // Filter by minimum start time if specified
+    if (minStartTime) {
+      const minMins = timeStringToMinutes(minStartTime);
+      times = times.filter((slot) => timeStringToMinutes(slot) >= minMins);
+    }
+
     if (bookingHours > 0) {
-      times = ALL_TIMES.filter((slot) => {
+      times = times.filter((slot) => {
         const slotMins = timeStringToMinutes(slot);
         // Ensure the entire block fits before midnight (24:00)
         if (slotMins + bookingHours * 60 > 24 * 60) return false;
@@ -63,7 +71,7 @@ export default function TimeSlider({
       times = times.filter((slot) => timeStringToMinutes(slot) >= currentMins);
     }
     return times;
-  }, [bookingHours, blockedTimes, selectedDate]);
+  }, [bookingHours, blockedTimes, selectedDate, minStartTime]);
 
   // Track selected index.
   const [currentIndex, setCurrentIndex] = useState(0);

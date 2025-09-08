@@ -388,6 +388,11 @@ export default function BookingPage() {
                 selectedDate={startDate}
                 blockedTimes={blockedTimesForStartDate}
                 bookingHours={bookingHours}
+                minStartTime={
+                  selectedStudio && selectedStudio.name === "THE GROUND"
+                    ? "4:00 PM"
+                    : null
+                }
               />
             )}
             {errors.startTime && (
