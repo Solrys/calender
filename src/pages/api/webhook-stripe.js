@@ -113,11 +113,13 @@ export default async function handler(req, res) {
             const calendarDate = new Date(startDate);
             const formattedDate = format(calendarDate, "yyyy-MM-dd");
 
-            // Create DateTime strings with user-selected date
+            // Create DateTime strings with user-selected date (ISO 8601 format)
             const startDateTime = `${formattedDate}T${convertTo24Hour(
               startTime
-            )}`;
-            const endDateTime = `${formattedDate}T${convertTo24Hour(endTime)}`;
+            )}:00`;
+            const endDateTime = `${formattedDate}T${convertTo24Hour(
+              endTime
+            )}:00`;
 
             const selectedServices = services
               .filter((service) => service.quantity > 0)
@@ -227,11 +229,13 @@ Total: $${estimatedTotal}`,
             const calendarDate = new Date(startDate);
             const formattedDate = format(calendarDate, "yyyy-MM-dd");
 
-            // Create DateTime strings with user-selected date
+            // Create DateTime strings with user-selected date (ISO 8601 format)
             const startDateTime = `${formattedDate}T${convertTo24Hour(
               startTime
-            )}`;
-            const endDateTime = `${formattedDate}T${convertTo24Hour(endTime)}`;
+            )}:00`;
+            const endDateTime = `${formattedDate}T${convertTo24Hour(
+              endTime
+            )}:00`;
 
             const selectedAddons = items
               .filter((item) => item.quantity > 0)
