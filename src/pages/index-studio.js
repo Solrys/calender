@@ -10,18 +10,9 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import styles from "@/styles/Home.module.css";
 import { BookingContext } from "@/context/BookingContext";
 import { useRouter } from "next/router";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Info } from "lucide-react";
 // Import helper for blocked times and time conversions
 import {
   computeBlockedTimesByDate,
@@ -90,6 +81,7 @@ export default function BookingPage() {
   // Fetch existing bookings for the selected studio and date.
   useEffect(() => {
     async function fetchBookings() {
+      // Skip fetching if no studio/date is selected
       if (!selectedStudio || !startDate) return;
       const formattedDate = format(startDate, "yyyy-MM-dd");
       try {
@@ -97,6 +89,19 @@ export default function BookingPage() {
           method: "GET",
           headers: { "Content-Type": "application/json" },
         });
+        
+        // Check if response is OK and is JSON
+        if (!res.ok) {
+          console.error("Error fetching bookings: Response not OK", res.status);
+          return;
+        }
+        
+        const contentType = res.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          console.error("Error fetching bookings: Response is not JSON");
+          return;
+        }
+        
         const data = await res.json();
         // Compute blocked times with special handling for the fourth studio.
         const filteredBookings = (data.bookings || []).filter((booking) => {
@@ -249,7 +254,9 @@ export default function BookingPage() {
                     setEndTime("");
                   }}
                 >
-                  <SelectTrigger className="w-full bg-[#f8f8f8] text-black">
+                  <SelectTrigger 
+                    className="w-full bg-[#f8f8f8] text-black"
+                  >
                     <MdLocationOn className="mr-1" />
                     <SelectValue placeholder="Select Studio" />
                   </SelectTrigger>
