@@ -145,21 +145,48 @@ export default function BookingPage() {
           }
           // For new fixed bookings, use the date as-is (no correction needed)
 
-          if (
-            selectedStudio.name === "BOTH THE LAB & THE EXTENSION FOR EVENTS"
-          ) {
-            // Combine bookings for THE LAB, THE EXTENSION, and BOTH option.
+          // Check if the booking date matches
+          if (bookingDateKey !== formattedDate) {
+            return false;
+          }
+
+          // Handle blocking logic for studios that share space
+          const selectedStudioName = selectedStudio.name;
+          const bookingStudio = booking.studio;
+          
+          // Handle both possible names for the "BOTH" option
+          const bothOptionName1 = "BOTH THE LAB & THE EXTENSION";
+          const bothOptionName2 = "BOTH THE LAB & THE EXTENSION FOR EVENTS";
+          const isBothOption = (name) => 
+            name === bothOptionName1 || name === bothOptionName2;
+
+          // If BOTH option is selected, block if THE LAB, THE EXTENSION, or BOTH is booked
+          if (isBothOption(selectedStudioName)) {
             return (
-              (booking.studio === "THE LAB" ||
-                booking.studio === "THE EXTENSION" ||
-                booking.studio === "BOTH THE LAB & THE EXTENSION FOR EVENTS") &&
-              bookingDateKey === formattedDate
+              bookingStudio === "THE LAB" ||
+              bookingStudio === "THE EXTENSION" ||
+              isBothOption(bookingStudio)
             );
           }
-          return (
-            booking.studio === selectedStudio.name &&
-            bookingDateKey === formattedDate
-          );
+
+          // If THE LAB is selected, block if THE LAB or BOTH is booked
+          if (selectedStudioName === "THE LAB") {
+            return (
+              bookingStudio === "THE LAB" ||
+              isBothOption(bookingStudio)
+            );
+          }
+
+          // If THE EXTENSION is selected, block if THE EXTENSION or BOTH is booked
+          if (selectedStudioName === "THE EXTENSION") {
+            return (
+              bookingStudio === "THE EXTENSION" ||
+              isBothOption(bookingStudio)
+            );
+          }
+
+          // For all other studios, only block if exact match
+          return bookingStudio === selectedStudioName;
         });
         const blockedByDate = computeBlockedTimesByDate(filteredBookings);
         console.log(blockedByDate, "hello");
@@ -181,7 +208,8 @@ export default function BookingPage() {
   // Determine minimum allowed booking hours (special studio requires at least 2)
   const minBookingHours =
     selectedStudio &&
-    selectedStudio.name === "BOTH THE LAB & THE EXTENSION FOR EVENTS"
+    (selectedStudio.name === "BOTH THE LAB & THE EXTENSION" ||
+      selectedStudio.name === "BOTH THE LAB & THE EXTENSION FOR EVENTS")
       ? 2
       : 0;
 
