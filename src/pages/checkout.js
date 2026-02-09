@@ -301,8 +301,12 @@ export default function CheckoutPage() {
               <p className="flex items-center gap-2 justify-center bg-[#f8f8f8] px-4 py-3 font-semibold text-center text-sm w-full">
                 {
                   item.id === 18
-                    ? `$${item.price}` // For Additional Edited Photos, show per-photo price
-                    : `$${item.price}/Hr` // For hour-based addons, show per-hour price
+                    ? `$${item.price}/Ea` // For Additional Edited Photos
+                    : item.id === 19
+                    ? `$${item.price}/Episode` // For Podcast Editing Episode
+                    : item.id === 20 || item.id === 21
+                    ? `$${item.price}/Reel` // For Podcast Reels
+                    : `$${item.price}/Hr` // For hour-based addons
                 }
               </p>
 

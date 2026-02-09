@@ -81,8 +81,8 @@ export default function ServiceCheckoutPage() {
   const serviceCosts = displayServices.map((service) => ({
     ...service,
     totalCost:
-      service.id === 18
-        ? service.price * service.quantity // Per-item pricing for Additional Edited Photos
+      service.id === 18 || service.id === 19 || service.id === 20 || service.id === 21
+        ? service.price * service.quantity // Per-item pricing (Photos, Editing Episode, Reels)
         : service.price * service.quantity * serviceHours, // Per-hour pricing for other services
   }));
 
@@ -234,8 +234,8 @@ export default function ServiceCheckoutPage() {
               {/* Quantity */}
               <p className="flex items-center gap-2 justify-center bg-[#f8f8f8] px-4 py-3 font-semibold text-center text-sm w-full">
                 {
-                  service.id === 18
-                    ? service.quantity // For Additional Edited Photos, show just quantity
+                  service.id === 18 || service.id === 19 || service.id === 20 || service.id === 21
+                    ? service.quantity // For per-item services (Photos, Editing Episode, Reels), show just quantity
                     : service.quantity * serviceHours // For hour-based services, show total hours
                 }
               </p>
@@ -244,8 +244,12 @@ export default function ServiceCheckoutPage() {
               <p className="flex items-center gap-2 justify-center bg-[#f8f8f8] px-4 py-3 font-semibold text-center text-sm w-full">
                 {
                   service.id === 18
-                    ? `$${service.price}` // For Additional Edited Photos, show per-photo price
-                    : `$${service.price}/Hr` // For hour-based services, show per-hour price
+                    ? `$${service.price}/Ea` // For Additional Edited Photos
+                    : service.id === 19
+                    ? `$${service.price}/Episode` // For Podcast Editing Episode
+                    : service.id === 20 || service.id === 21
+                    ? `$${service.price}/Reel` // For Podcast Reels
+                    : `$${service.price}/Hr` // For hour-based services
                 }
               </p>
 
@@ -253,8 +257,8 @@ export default function ServiceCheckoutPage() {
               <p className="flex items-center gap-2 justify-center bg-[#f8f8f8] px-4 py-3 font-semibold text-center text-sm w-full">
                 $
                 {
-                  service.id === 18
-                    ? service.price * service.quantity // Per-item pricing for Additional Edited Photos
+                  service.id === 18 || service.id === 19 || service.id === 20 || service.id === 21
+                    ? service.price * service.quantity // Per-item pricing (Photos, Editing Episode, Reels)
                     : service.price * service.quantity * serviceHours // Per-hour pricing for other services
                 }
               </p>

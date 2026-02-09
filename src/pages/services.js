@@ -118,13 +118,16 @@ export default function ServicesPage() {
               {/* Quantity Controls */}
               <div className="flex gap-2 items-center">
                 <p className="text-gray-600 font-bold text-sm">
-                  {item.id === 13 ||
-                  item.id === 14 ||
-                  item.id === 15 ||
-                  item.id === 16
+                  {item.id === 13 || item.id === 14
                     ? `$${item.price}`
+                    : item.id === 15
+                    ? `$${item.price}/Hr`
                     : item.id === 18
                     ? `$${item.price}/Ea`
+                    : item.id === 19
+                    ? `$${item.price}/Episode`
+                    : item.id === 20 || item.id === 21
+                    ? `$${item.price}/Reel`
                     : `$${item.price}/Hr`}
                 </p>
                 <div className="flex items-center justify-center gap-1">
@@ -144,22 +147,14 @@ export default function ServicesPage() {
                   </span>
                   <button
                     className={`w-6 h-6 flex items-center justify-center text-sm ${
-                      item.id === 13 ||
-                      item.id === 14 ||
-                      item.id === 15 ||
-                      item.id === 16
+                      item.id === 13 || item.id === 14
                         ? item.quantity >= 1
                           ? "bg-gray-300 cursor-not-allowed"
                           : "bg-black text-white hover:bg-gray-800"
                         : "bg-black text-white hover:bg-gray-800"
                     }`}
                     onClick={() => {
-                      if (
-                        item.id === 13 ||
-                        item.id === 14 ||
-                        item.id === 15 ||
-                        item.id === 16
-                      ) {
+                      if (item.id === 13 || item.id === 14) {
                         if (item.quantity < 1) {
                           handleQuantityUpdate(item, 1);
                         } else {
@@ -170,10 +165,7 @@ export default function ServicesPage() {
                       }
                     }}
                     disabled={
-                      item.id === 13 ||
-                      item.id === 14 ||
-                      item.id === 15 ||
-                      item.id === 16
+                      item.id === 13 || item.id === 14
                         ? item.quantity >= 1
                         : false
                     }

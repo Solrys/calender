@@ -123,21 +123,39 @@ export function BookingProvider({ children }) {
     },
     {
       id: 15,
-      name: "Full-Service Podcast Filming (4 HR INCLUDED)",
-      price: 850,
+      name: "Podcast Filming Crew",
+      price: 400,
       quantity: 0,
       image: "/service/podcast_filming.jpg",
       description:
-        "Our in-house podcast producer runs the show—just walk in, and we'll handle the rest. Equipped with professional-grade cameras, crystal-clear sound systems, and full lighting kits; including a 300-watt key light with a large lantern modifier, backlight kickers, C-stand, dual light stands, and real-time monitors, everything is ready to go. This includes set-up and break-down time.",
+        "Book our premium podcast filming crew for cinematic multi-camera production and pristine sound for a studio-quality podcast experience (2-hour minimum).",
     },
     {
-      id: 16,
-      name: "Full-Service Podcast Filming + Editing",
-      price: 1500,
+      id: 19,
+      name: "Podcast Editing Episode",
+      price: 300,
       quantity: 0,
       image: "/service/podcast_filming_editing.jpg",
       description:
-        "Our in-house podcast producer runs the show—just walk in, and we'll handle the rest. Equipped with professional-grade cameras, crystal-clear sound systems, and full lighting kits; including a 300-watt key light with a large lantern modifier, backlight kickers, C-stand, dual light stands, and real-time monitors, everything is ready to go. This includes set-up and break-down time. After filming, our team handles Post-Production Editing—Cutting, mixing, color-correcting, and optimizing your episode for all platforms. From shoot to final export, we've got you covered.",
+        "Book our professional podcast episode editing for clean audio, seamless cuts, and a polished, studio-quality final episode.",
+    },
+    {
+      id: 20,
+      name: "Podcast Simple Reels",
+      price: 125,
+      quantity: 0,
+      image: "/service/btsreels.jpg",
+      description:
+        "Book our podcast simple reels service for clean, engaging short-form clips optimized for social media and maximum reach.",
+    },
+    {
+      id: 21,
+      name: "Podcast Advanced Reels",
+      price: 180,
+      quantity: 0,
+      image: "/service/btsreels.jpg",
+      description:
+        "Book our advanced podcast reels service for dynamic, high-impact short-form clips with enhanced editing and visual storytelling to boost engagement.",
     },
     {
       id: 17,
