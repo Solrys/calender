@@ -12,6 +12,12 @@
 
 # testing
 /coverage
+test-booking-blocking.js
+src/utils/testBookingBlocking.js
+src/utils/testBookingBlocking.browser.js
+src/utils/TESTING_BOOKING_BLOCKING.md
+README_TESTING.md
+scripts/
 
 # next.js
 /.next/
